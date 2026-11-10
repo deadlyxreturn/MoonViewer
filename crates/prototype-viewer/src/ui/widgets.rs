@@ -986,8 +986,7 @@ impl<'a> Floater<'a> {
                         radius,
                     );
                 }
-                // Moon Viewer's gold frame: Preferences and the messenger
-                if self.id == super::options::WINDOW || self.id == "conversations" {
+                if self.id == super::options::WINDOW {
                     let layer = ctx.layer_painter(response.response.layer_id);
                     super::options::paint_window_trim(&layer, p, response.response.rect, radius, minimized);
                 }
@@ -1756,6 +1755,84 @@ pub fn bubble_tinted(painter: &egui::Painter, p: &Palette, rect: egui::Rect, rad
 }
 
 /// Glossy pink for the active choice, smoky lilac for the other controls.
+/// Set by the app each frame: the window has no Windows title bar, so Moon
+/// Viewer's own glossy caption buttons and edge grips stand in for it.
+pub(crate) const BORDERLESS_KEY: &str = "moon_window_borderless";
+
+pub(crate) fn window_borderless(ctx: &egui::Context) -> bool {
+    ctx.data(|d| d.get_temp::<bool>(egui::Id::new(BORDERLESS_KEY)).unwrap_or(false))
+}
+
+/// One of Moon Viewer's glossy caption buttons (minimize, maximize, close):
+/// a lavender glass rounded square with a pearl reflection and a gold rim.
+pub(crate) fn glossy_caption_button(ui: &mut egui::Ui, p: &Palette, icon: &str, label: &str, close: bool, size: Vec2) -> bool {
+    let (rect, response) = ui.allocate_exact_size(size, Sense::click());
+    let hot = response.hovered() || response.has_focus();
+    let ink = if p.high_contrast {
+        glass_pill(ui.painter(), p, rect, close && hot, hot)
+    } else {
+        let painter = ui.painter();
+        let radius = (size.y * 0.29).round();
+        let face = if hot { 0.62 } else { 0.42 };
+        gradient_rect(painter, rect, radius, p.indigo_light.gamma_multiply(face), p.navy.gamma_multiply(0.38));
+        if close && hot {
+            painter.rect_filled(rect, radius, p.rose.gamma_multiply(0.55));
+        }
+        let top = egui::Rect::from_min_max(rect.min + Vec2::new(3.0, 1.5), egui::pos2(rect.right() - 3.0, rect.center().y));
+        gradient_rect(painter, top, (radius - 3.0).max(1.0), p.ink.gamma_multiply(0.30), Color32::TRANSPARENT);
+        let rim = p.amber.lerp_to_gamma(p.ink, 0.4).gamma_multiply(if hot { 1.0 } else { 0.75 });
+        painter.rect_stroke(rect, radius, Stroke::new(1.2, rim), egui::StrokeKind::Inside);
+        p.ink
+    };
+    paint_glyph(ui.painter(), icon, rect.center(), (size.y * 0.57).round(), ink);
+    response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, ui.is_enabled(), label));
+    response
+        .on_hover_cursor(egui::CursorIcon::PointingHand)
+        .on_hover_text(label)
+        .clicked()
+}
+
+/// Thin grips along the window's edges and corners that resize a window
+/// without a Windows frame. Each is its own small area, so they never cover
+/// the other controls. Returns the edge being dragged, if one started.
+pub(crate) fn window_resize_grips(ctx: &egui::Context) -> Option<winit::window::ResizeDirection> {
+    use winit::window::ResizeDirection as Dir;
+    if ctx.input(|i| i.viewport().maximized.unwrap_or(false) || i.viewport().fullscreen.unwrap_or(false)) {
+        return None;
+    }
+    const EDGE: f32 = 5.0;
+    const CORNER: f32 = 12.0;
+    let s = ctx.content_rect();
+    let (l, r, t, b) = (s.left(), s.right(), s.top(), s.bottom());
+    let at = |x0: f32, y0: f32, x1: f32, y1: f32| egui::Rect::from_min_max(egui::pos2(x0, y0), egui::pos2(x1, y1));
+    let zones = [
+        (at(l, t, l + CORNER, t + CORNER), Dir::NorthWest, egui::CursorIcon::ResizeNorthWest),
+        (at(r - CORNER, t, r, t + CORNER), Dir::NorthEast, egui::CursorIcon::ResizeNorthEast),
+        (at(l, b - CORNER, l + CORNER, b), Dir::SouthWest, egui::CursorIcon::ResizeSouthWest),
+        (at(r - CORNER, b - CORNER, r, b), Dir::SouthEast, egui::CursorIcon::ResizeSouthEast),
+        (at(l + CORNER, t, r - CORNER, t + EDGE), Dir::North, egui::CursorIcon::ResizeNorth),
+        (at(l + CORNER, b - EDGE, r - CORNER, b), Dir::South, egui::CursorIcon::ResizeSouth),
+        (at(l, t + CORNER, l + EDGE, b - CORNER), Dir::West, egui::CursorIcon::ResizeWest),
+        (at(r - EDGE, t + CORNER, r, b - CORNER), Dir::East, egui::CursorIcon::ResizeEast),
+    ];
+    let mut started = None;
+    for (i, (zone, dir, cursor)) in zones.into_iter().enumerate() {
+        egui::Area::new(egui::Id::new(("moon_window_resize", i)))
+            .order(egui::Order::Foreground)
+            .fixed_pos(zone.min)
+            .show(ctx, |ui| {
+                let grip = ui.allocate_rect(zone, Sense::drag());
+                if grip.hovered() || grip.dragged() {
+                    ui.ctx().set_cursor_icon(cursor);
+                }
+                if grip.drag_started() {
+                    started = Some(dir);
+                }
+            });
+    }
+    started
+}
+
 pub(super) fn glass_pill(painter: &egui::Painter, p: &Palette, rect: egui::Rect, selected: bool, hot: bool) -> Color32 {
     let radius = rect.height() * 0.5;
     if p.high_contrast {

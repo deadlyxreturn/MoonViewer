@@ -25,6 +25,12 @@ use egui::{Color32, RichText, Vec2};
 
 #[derive(Default)]
 pub enum BarAction {
+    /// Moon Viewer's glossy caption buttons and the bar as a title bar (no
+    /// Windows title bar in-world with the classic bars).
+    Minimize,
+    ToggleMaximize,
+    DragWindow,
+    ResizeWindow(winit::window::ResizeDirection),
     /// Prototype's recorder: start or stop a video.
     Record,
     ToggleVr,
@@ -1848,6 +1854,17 @@ pub fn top_bars(
             glass = Some((ui.painter().clone(), ui.painter().add(egui::Shape::Noop)));
             // the bar's background spans the whole window width
             ui.set_min_width(ui.available_width());
+            let borderless = super::widgets::window_borderless(ui.ctx());
+            if borderless {
+                // the bar's empty parts move the window (double-click
+                // maximizes); its menus and fields, added after, come first
+                let grab = ui.interact(ui.max_rect(), egui::Id::new("moon_world_window_drag"), egui::Sense::click_and_drag());
+                if grab.double_clicked() {
+                    action = BarAction::ToggleMaximize;
+                } else if grab.drag_started() {
+                    action = BarAction::DragWindow;
+                }
+            }
             ui.horizontal_centered(|ui| {
                 ui.set_min_width(ui.available_width());
                 ui.spacing_mut().item_spacing.x = 4.0;
@@ -1937,6 +1954,29 @@ pub fn top_bars(
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     ui.spacing_mut().item_spacing.x = 10.0;
                     ui.add_space(2.0);
+                    // Moon Viewer's glossy minimize, maximize and close at the
+                    // right end, standing in for the Windows title bar's
+                    if borderless {
+                        ui.spacing_mut().item_spacing.x = 5.0;
+                        let size = Vec2::new(30.0, (layout.nav_bar_height - 6.0).clamp(18.0, 26.0));
+                        if super::widgets::glossy_caption_button(ui, p, "x", prototype_i18n::tr!("common-close"), true, size) {
+                            action = BarAction::Quit;
+                        }
+                        let maximized = ui.input(|i| i.viewport().maximized.unwrap_or(false));
+                        let (icon, label) = if maximized {
+                            ("copy", prototype_i18n::tr!("ui-options-restore"))
+                        } else {
+                            ("square", prototype_i18n::tr!("common-maximize"))
+                        };
+                        if super::widgets::glossy_caption_button(ui, p, icon, label, false, size) {
+                            action = BarAction::ToggleMaximize;
+                        }
+                        if super::widgets::glossy_caption_button(ui, p, "minus", prototype_i18n::tr!("region-restart-minimize"), false, size) {
+                            action = BarAction::Minimize;
+                        }
+                        ui.add_space(6.0);
+                        ui.spacing_mut().item_spacing.x = 10.0;
+                    }
                     // Prototype's center: the bell at the right end, after the
                     // frame rate, its cards unroll under it
                     if bell.prototype {
@@ -2096,6 +2136,12 @@ pub fn top_bars(
         });
     if let Some((painter, slot)) = glass {
         super::widgets::finish_bar_glass(&painter, slot, bar.response.rect, p);
+    }
+    // the window's edges resize it (no Windows frame)
+    if super::widgets::window_borderless(ui.ctx())
+        && let Some(dir) = super::widgets::window_resize_grips(ui.ctx())
+    {
+        action = BarAction::ResizeWindow(dir);
     }
     (action, audio_action)
 }

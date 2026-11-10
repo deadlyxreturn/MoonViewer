@@ -121,31 +121,7 @@ fn menu_bar(ctx: &Context, p: &Palette, form: &mut LoginForm) -> LoginAction {
 }
 
 fn caption_button(ui: &mut egui::Ui, p: &Palette, icon: &str, label: &str, close: bool) -> bool {
-    let (rect, response) = ui.allocate_exact_size(vec2(34.0, 28.0), egui::Sense::click());
-    let hot = response.hovered() || response.has_focus();
-    let ink = if p.high_contrast {
-        widgets::glass_pill(ui.painter(), p, rect, close && hot, hot)
-    } else {
-        // glossy rounded square with a gold rim, like the concept art
-        let painter = ui.painter();
-        let radius = 8.0;
-        let face = if hot { 0.62 } else { 0.42 };
-        widgets::gradient_rect(painter, rect, radius, p.indigo_light.gamma_multiply(face), p.navy.gamma_multiply(0.38));
-        if close && hot {
-            painter.rect_filled(rect, radius, p.rose.gamma_multiply(0.55));
-        }
-        let top = Rect::from_min_max(rect.min + vec2(3.0, 1.5), pos2(rect.right() - 3.0, rect.center().y));
-        widgets::gradient_rect(painter, top, 5.0, p.ink.gamma_multiply(0.30), egui::Color32::TRANSPARENT);
-        let rim = p.amber.lerp_to_gamma(p.ink, 0.4).gamma_multiply(if hot { 1.0 } else { 0.75 });
-        painter.rect_stroke(rect, radius, egui::Stroke::new(1.2, rim), egui::StrokeKind::Inside);
-        p.ink
-    };
-    widgets::paint_glyph(ui.painter(), icon, rect.center(), 16.0, ink);
-    response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, ui.is_enabled(), label));
-    response
-        .on_hover_cursor(egui::CursorIcon::PointingHand)
-        .on_hover_text(label)
-        .clicked()
+    widgets::glossy_caption_button(ui, p, icon, label, close, vec2(34.0, 28.0))
 }
 
 fn caption_controls(ctx: &Context, p: &Palette, action: &mut LoginAction) {
@@ -173,41 +149,10 @@ fn caption_controls(ctx: &Context, p: &Palette, action: &mut LoginAction) {
         });
 }
 
-/// Thin grips along the window's edges and corners that resize it, in place
-/// of the Windows frame the login screen goes without. Each is its own small
-/// area, so they never cover the screen's other controls.
+/// The window's edge grips (no Windows frame on the login screen).
 fn resize_edges(ctx: &Context, action: &mut LoginAction) {
-    use winit::window::ResizeDirection as Dir;
-    if ctx.input(|i| i.viewport().maximized.unwrap_or(false) || i.viewport().fullscreen.unwrap_or(false)) {
-        return;
-    }
-    const EDGE: f32 = 5.0;
-    const CORNER: f32 = 12.0;
-    let s = ctx.content_rect();
-    let (l, r, t, b) = (s.left(), s.right(), s.top(), s.bottom());
-    let zones = [
-        (Rect::from_min_max(pos2(l, t), pos2(l + CORNER, t + CORNER)), Dir::NorthWest, egui::CursorIcon::ResizeNorthWest),
-        (Rect::from_min_max(pos2(r - CORNER, t), pos2(r, t + CORNER)), Dir::NorthEast, egui::CursorIcon::ResizeNorthEast),
-        (Rect::from_min_max(pos2(l, b - CORNER), pos2(l + CORNER, b)), Dir::SouthWest, egui::CursorIcon::ResizeSouthWest),
-        (Rect::from_min_max(pos2(r - CORNER, b - CORNER), pos2(r, b)), Dir::SouthEast, egui::CursorIcon::ResizeSouthEast),
-        (Rect::from_min_max(pos2(l + CORNER, t), pos2(r - CORNER, t + EDGE)), Dir::North, egui::CursorIcon::ResizeNorth),
-        (Rect::from_min_max(pos2(l + CORNER, b - EDGE), pos2(r - CORNER, b)), Dir::South, egui::CursorIcon::ResizeSouth),
-        (Rect::from_min_max(pos2(l, t + CORNER), pos2(l + EDGE, b - CORNER)), Dir::West, egui::CursorIcon::ResizeWest),
-        (Rect::from_min_max(pos2(r - EDGE, t + CORNER), pos2(r, b - CORNER)), Dir::East, egui::CursorIcon::ResizeEast),
-    ];
-    for (i, (zone, dir, cursor)) in zones.into_iter().enumerate() {
-        egui::Area::new(Id::unique(("moon_login_resize", i)))
-            .order(egui::Order::Foreground)
-            .fixed_pos(zone.min)
-            .show(ctx, |ui| {
-                let grip = ui.allocate_rect(zone, egui::Sense::drag());
-                if grip.hovered() || grip.dragged() {
-                    ui.ctx().set_cursor_icon(cursor);
-                }
-                if grip.drag_started() {
-                    *action = LoginAction::ResizeWindow(dir);
-                }
-            });
+    if let Some(dir) = widgets::window_resize_grips(ctx) {
+        *action = LoginAction::ResizeWindow(dir);
     }
 }
 
