@@ -46,3 +46,25 @@ jobs:
           path: target/moon-windows-release/
           if-no-files-found: error
           compression-level: 0
+      - name: Capture login and Preferences screenshots
+        if: always()
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $zip = Get-ChildItem target/moon-windows-release -Recurse -Filter 'Moon-Viewer-*-windows-x64.zip' | Select-Object -First 1
+          $tmp = Join-Path $env:RUNNER_TEMP 'moon-portable'
+          Expand-Archive -LiteralPath $zip.FullName -DestinationPath $tmp -Force
+          $exe = Get-ChildItem $tmp -Recurse -Filter 'moon-viewer.exe' | Select-Object -First 1
+          $shots = New-Item -ItemType Directory -Force -Path target/moon-screenshots
+          foreach ($scene in 'Login', 'Preferences') {
+            try { ./scripts/capture-moon.ps1 -Exe $exe.FullName -Out $shots.FullName -Scene $scene }
+            catch { Write-Warning $_ }
+          }
+      - name: Upload screenshots
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: Moon-Viewer-screenshots
+          path: target/moon-screenshots/
+          if-no-files-found: warn
