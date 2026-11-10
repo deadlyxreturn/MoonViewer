@@ -125,7 +125,6 @@ pub(super) fn connect_button(painter: &Painter, rect: Rect, p: &Palette, active:
         let pill_h = 50.0;
         let size = vec2(pill_w / PILL_W, pill_h / PILL_H);
         let bounds = Rect::from_center_size(rect.center() - (CENTER - vec2(0.5, 0.5)) * size, size);
-
         let opacity = 255;
         painter.image(texture.id(), bounds, full_uv(), Color32::from_white_alpha(opacity));
         // the pink face inside the gold rim
