@@ -1,0 +1,88 @@
+name: Screenshots
+
+# Runs a finished Windows build with a software Vulkan driver (Mesa
+# lavapipe) and captures the login, Preferences and messenger scenes, so the
+# look can be checked without a GPU.
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Run id of a "Windows release artifacts" build
+        type: string
+        required: true
+      tag:
+        description: The version that build used
+        type: string
+        default: v0.1.0
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  capture:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download the build
+        uses: actions/download-artifact@v4
+        with:
+          name: Moon-Viewer-${{ inputs.tag }}-windows-x64
+          path: build
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ github.token }}
+      - name: Unpack the portable viewer
+        shell: pwsh
+        run: |
+          $zip = Get-ChildItem build -Recurse -Filter 'Moon-Viewer-*-windows-x64.zip' | Select-Object -First 1
+          Expand-Archive -LiteralPath $zip.FullName -DestinationPath viewer -Force
+          $exe = Get-ChildItem viewer -Recurse -Filter 'moon-viewer.exe' | Select-Object -First 1
+          "MOON_EXE=$($exe.FullName)" >> $env:GITHUB_ENV
+          "MOON_DIR=$($exe.DirectoryName)" >> $env:GITHUB_ENV
+      - name: Software Vulkan (Mesa lavapipe + Vulkan loader)
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # Mesa for Windows, release build (lavapipe = CPU Vulkan driver)
+          $rel = Invoke-RestMethod -Headers @{ Authorization = "Bearer $env:GH_TOKEN" } https://api.github.com/repos/pal1000/mesa-dist-win/releases/latest
+          $asset = $rel.assets | Where-Object { $_.name -match 'release-msvc\.7z$' } | Select-Object -First 1
+          Write-Host "Mesa: $($asset.name)"
+          Invoke-WebRequest $asset.browser_download_url -OutFile mesa.7z
+          7z x mesa.7z -omesa | Out-Null
+          $icd = Get-ChildItem mesa -Recurse -Filter 'lvp_icd.x86_64.json' | Where-Object { $_.FullName -match 'x64' } | Select-Object -First 1
+          if (-not $icd) { $icd = Get-ChildItem mesa -Recurse -Filter 'lvp_icd*.json' | Select-Object -First 1 }
+          Write-Host "lavapipe ICD: $($icd.FullName)"
+          "VK_DRIVER_FILES=$($icd.FullName)" >> $env:GITHUB_ENV
+          "VK_ICD_FILENAMES=$($icd.FullName)" >> $env:GITHUB_ENV
+          # the Vulkan loader (vulkan-1.dll) next to the viewer
+          Invoke-WebRequest 'https://sdk.lunarg.com/sdk/download/latest/windows/vulkan-runtime-components.zip?u=' -OutFile vkrt.zip
+          Expand-Archive vkrt.zip -DestinationPath vkrt -Force
+          $loader = Get-ChildItem vkrt -Recurse -Filter 'vulkan-1.dll' | Where-Object { $_.FullName -match 'x64' } | Select-Object -First 1
+          Write-Host "Vulkan loader: $($loader.FullName)"
+          Copy-Item $loader.FullName $env:MOON_DIR
+      - name: Capture login, Preferences and messenger
+        shell: pwsh
+        run: |
+          $shots = New-Item -ItemType Directory -Force -Path screenshots
+          foreach ($scene in 'Login', 'Preferences', 'Messenger') {
+            try { ./scripts/capture-moon.ps1 -Exe $env:MOON_EXE -Out $shots.FullName -Scene $scene }
+            catch { Write-Warning $_ }
+          }
+          Get-ChildItem screenshots
+          # the viewer's own log, to see why a capture did not come
+          Get-ChildItem $env:LOCALAPPDATA, $env:APPDATA -Recurse -Filter '*.log' -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -match 'Moon|Prototype' } | Select-Object -First 3 |
+            ForEach-Object { Write-Host "== $($_.FullName)"; Get-Content $_.FullName -Tail 40 }
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: Moon-Viewer-screenshots
+          path: screenshots/
+          if-no-files-found: warn
