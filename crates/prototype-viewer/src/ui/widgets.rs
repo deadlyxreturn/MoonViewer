@@ -763,6 +763,10 @@ impl<'a> Floater<'a> {
                     }
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         ui.spacing_mut().item_spacing.x = 6.0;
+                        if big && !p.high_contrast {
+                            // clear of the gold frame's corner ornament
+                            ui.add_space(22.0);
+                        }
                         if title_button(ui, p, "x").on_hover_text(prototype_i18n::tr!("common-close")).clicked() {
                             close = true;
                         }
@@ -2043,7 +2047,20 @@ pub fn paint_slider_knob(ui: &egui::Ui, p: &Palette, resp: &egui::Response, frac
         gradient_rect(painter, fill, rail_h * 0.5, p.violet.lerp_to_gamma(p.field, 0.25), p.violet);
     }
     let hot = resp.hovered() || resp.dragged() || resp.has_focus();
-    white_knob(painter, p, egui::pos2(x, rect.center().y), 7.5, hot, true);
+    let center = egui::pos2(x, rect.center().y);
+    if !p.high_contrast
+        && let Some(t) = super::icons::global("moon-star")
+    {
+        // Moon Viewer: a gold star rides the rail
+        if hot {
+            painter.circle_filled(center, 11.0, p.amber.gamma_multiply(0.18));
+        }
+        let size = if hot { 26.0 } else { 22.0 };
+        let uv = egui::Rect::from_min_max(egui::Pos2::ZERO, egui::pos2(1.0, 1.0));
+        painter.image(t.id(), egui::Rect::from_center_size(center, Vec2::splat(size)), uv, Color32::WHITE);
+        return;
+    }
+    white_knob(painter, p, center, 7.5, hot, true);
 }
 
 /// Check box of the interface, with the contract of `ui.checkbox`: the

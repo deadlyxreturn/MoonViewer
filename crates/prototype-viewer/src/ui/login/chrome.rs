@@ -9,6 +9,7 @@ use crate::ui::{
 };
 use egui::{Context, Id, Rect, RichText, Vec2, pos2, vec2};
 
+#[allow(dead_code)]
 fn menu_action(ui: &mut egui::Ui, label: &str, action: &mut LoginAction, next: LoginAction) {
     if ui.button(label).clicked() {
         *action = next;
@@ -18,6 +19,8 @@ fn menu_action(ui: &mut egui::Ui, label: &str, action: &mut LoginAction, next: L
 
 fn menu_bar(ctx: &Context, p: &Palette, form: &mut LoginForm) -> LoginAction {
     let mut action = LoginAction::None;
+    // the login screen keeps only the wordmark and the buttons on the right
+    let _ = &form;
     let screen = ctx.content_rect();
     egui::Area::new(Id::unique("moon_login_menu"))
         .fixed_pos(screen.min)
@@ -68,45 +71,6 @@ fn menu_bar(ctx: &Context, p: &Palette, form: &mut LoginForm) -> LoginAction {
                             ui.label(RichText::new("MOON VIEWER").font(font).extra_letter_spacing(1.0).color(p.ink));
                             ui.add_space(8.0);
                         }
-                        ui.separator();
-                        ui.menu_button(prototype_i18n::tr!("moon-menu-viewer"), |ui| {
-                            menu_action(ui, prototype_i18n::tr!("common-preferences"), &mut action, LoginAction::Preferences);
-                            menu_action(
-                                ui,
-                                prototype_i18n::tr!("login-accessibility"),
-                                &mut action,
-                                LoginAction::Accessibility,
-                            );
-                            menu_action(ui, prototype_i18n::tr!("common-quit"), &mut action, LoginAction::Quit);
-                        });
-                        ui.menu_button(prototype_i18n::tr!("moon-menu-world"), |ui| {
-                            if ui.button(prototype_i18n::tr!("grids-manage")).clicked() {
-                                super::super::grids::request_open(ctx);
-                                ui.close();
-                            }
-                        });
-                        ui.menu_button(prototype_i18n::tr!("moon-menu-help"), |ui| {
-                            if ui.button(prototype_i18n::tr!("ui-login-news")).clicked() {
-                                form.show_info = true;
-                                ui.close();
-                            }
-                            menu_action(
-                                ui,
-                                prototype_i18n::tr!("moon-menu-check-updates"),
-                                &mut action,
-                                LoginAction::CheckUpdates,
-                            );
-                            menu_action(ui, prototype_i18n::tr!("moon-menu-report-bug"), &mut action, LoginAction::ReportBug);
-                        });
-                        ui.menu_button(prototype_i18n::tr!("moon-menu-debug"), |ui| {
-                            menu_action(ui, prototype_i18n::tr!("moon-login-advanced"), &mut action, LoginAction::Advanced);
-                            menu_action(
-                                ui,
-                                prototype_i18n::tr!("moon-menu-copy-version"),
-                                &mut action,
-                                LoginAction::CopyVersion,
-                            );
-                        });
                     });
                 });
             let edge = ui.min_rect().bottom();
@@ -132,6 +96,7 @@ fn caption_controls(ctx: &Context, p: &Palette, action: &mut LoginAction) {
         ("square", prototype_i18n::tr!("common-maximize"))
     };
     egui::Area::new(Id::unique("login_window_controls"))
+        .order(egui::Order::Foreground)
         .anchor(egui::Align2::RIGHT_TOP, vec2(-10.0, 5.0))
         .show(ctx, |ui| {
             ui.horizontal(|ui| {
@@ -193,6 +158,7 @@ pub fn footer(ctx: &Context, p: &Palette, icons: &Icons, info: &LoginInfo, sideb
     let _ = sidebar_visible;
     // Quick Preferences and Accessibility beside the caption buttons.
     egui::Area::new(Id::unique("login_settings"))
+        .order(egui::Order::Foreground)
         .anchor(egui::Align2::RIGHT_TOP, vec2(-138.0, 4.0))
         .show(ctx, |ui| {
             if widgets::action_button(ui, p, "settings-filled", "", ActionKind::Flat, Vec2::splat(30.0))
@@ -205,6 +171,7 @@ pub fn footer(ctx: &Context, p: &Palette, icons: &Icons, info: &LoginInfo, sideb
     // Left of it, the way to a larger, more readable interface before the
     // first login: Preferences › Accessibility.
     egui::Area::new(Id::unique("login_accessibility"))
+        .order(egui::Order::Foreground)
         .anchor(egui::Align2::RIGHT_TOP, vec2(-176.0, 4.0))
         .show(ctx, |ui| {
             if widgets::action_button(ui, p, "accessible-filled", "", ActionKind::Flat, Vec2::splat(30.0))
