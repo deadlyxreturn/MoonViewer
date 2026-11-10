@@ -70,9 +70,12 @@ pub(super) fn glass_wash(painter: &Painter, p: &Palette, rect: Rect, radius: f32
             painter,
             rect,
             radius,
-            p.navy.gamma_multiply(0.20),
-            p.indigo_light.gamma_multiply(0.27),
+            p.navy.gamma_multiply(0.12),
+            p.indigo_light.gamma_multiply(0.18),
         );
+        // glossy reflection across the top of the glass
+        let gloss = Rect::from_min_max(rect.min, pos2(rect.right(), rect.top() + rect.height() * 0.32));
+        widgets::gradient_rect(painter, gloss, radius, p.ink.gamma_multiply(0.11), Color32::TRANSPARENT);
     }
 }
 

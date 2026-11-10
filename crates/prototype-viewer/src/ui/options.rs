@@ -659,7 +659,7 @@ pub enum FolderChoice {
 
 /// Width of the sidebar, height of the footer.
 const SIDEBAR_W: f32 = 224.0;
-const FOOTER_H: f32 = 54.0;
+const FOOTER_H: f32 = 64.0;
 /// The controls' widths (a slider's rail, a drop-down list).
 const SLIDER_W: f32 = 150.0;
 const COMBO_W: f32 = 190.0;
@@ -1329,7 +1329,8 @@ fn body(ui: &mut egui::Ui, p: &Palette, s: &mut Settings, d: &Settings, st: &mut
     finish::glass_wash(ui.painter(), p, full.shrink2(vec2(2.0, 0.0)), radius);
     let footer = Rect::from_min_max(
         pos2(full.left() + 2.0, full.bottom() - FOOTER_H),
-        full.right_bottom() - vec2(2.0, 2.0),
+        // clear of the gold frame's bottom ornament
+        full.right_bottom() - vec2(2.0, 12.0),
     );
     let side = Rect::from_min_max(
         pos2(full.left() + 11.0, full.top() + 5.0),
@@ -1832,7 +1833,8 @@ fn footer_bar(
     );
     let mut ui = ui.new_child(
         egui::UiBuilder::new()
-            .max_rect(footer.shrink2(vec2(14.0, 0.0)))
+            // inset past the frame's corner ornaments
+            .max_rect(footer.shrink2(vec2(34.0, 0.0)))
             .layout(egui::Layout::left_to_right(egui::Align::Center)),
     );
     ui.spacing_mut().item_spacing.x = 8.0;

@@ -243,8 +243,8 @@ fn field(
             moon::polished_pill(
                 ui.ctx(),
                 response.response.rect,
-                fill.lerp_to_gamma(p.ink, 0.49).gamma_multiply(0.84),
-                fill.gamma_multiply(0.68),
+                fill.lerp_to_gamma(p.ink, 0.52).gamma_multiply(0.74),
+                fill.gamma_multiply(0.50),
                 p.ink,
                 edge.lerp_to_gamma(p.ink, 0.64),
             ),

@@ -121,11 +121,12 @@ pub(super) fn connect_button(painter: &Painter, rect: Rect, p: &Palette, active:
         const PILL_W: f32 = 0.78;
         const PILL_H: f32 = 0.424;
         const CENTER: Vec2 = vec2(0.5053, 0.5228);
-        let pill_w = (rect.width() - 6.0).max(1.0);
-        let pill_h = 54.0;
+        let pill_w = (rect.width() - 30.0).max(1.0);
+        let pill_h = 50.0;
         let size = vec2(pill_w / PILL_W, pill_h / PILL_H);
         let bounds = Rect::from_center_size(rect.center() - (CENTER - vec2(0.5, 0.5)) * size, size);
-        let opacity = if active { 255 } else { 235 };
+
+        let opacity = 255;
         painter.image(texture.id(), bounds, full_uv(), Color32::from_white_alpha(opacity));
         // the pink face inside the gold rim
         let face = Rect::from_center_size(rect.center(), vec2(size.x * 0.7565, size.y * 0.355));
@@ -138,9 +139,6 @@ pub(super) fn connect_button(painter: &Painter, rect: Rect, p: &Palette, active:
                 Stroke::new(5.0, p.rose.gamma_multiply(0.22)),
                 StrokeKind::Outside,
             );
-        } else if !active {
-            // not ready to log in yet: a slightly muted face
-            painter.rect_filled(face, face.height() * 0.5, p.navy.gamma_multiply(0.18));
         }
         return;
     }

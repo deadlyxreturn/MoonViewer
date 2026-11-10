@@ -58,7 +58,7 @@ impl Default for Theme {
             danger_dim: "#81495F".into(),
             indigo_light: "#BBA8F1".into(),
             on_accent: "#261732".into(),
-            panel_alpha: 223,
+            panel_alpha: 200,
             button_radius: 10,
             window_radius: 16,
             font_scale: 1.0,
