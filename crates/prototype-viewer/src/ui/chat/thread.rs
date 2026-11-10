@@ -584,14 +584,32 @@ fn day_separator(ui: &mut egui::Ui, p: &Palette, text: &str) {
         .layout_no_wrap(text.to_owned(), egui::FontId::proportional(chat_size(ui.ctx(), 11.0)), p.muted_dim);
     let half = galley.size().x * 0.5 + 8.0;
     let y = rect.center().y;
-    let stroke = egui::Stroke::new(1.0, p.raised.gamma_multiply(0.8));
+    let moon = !p.high_contrast;
+    let stroke = if moon {
+        egui::Stroke::new(1.0, p.amber.gamma_multiply(0.4))
+    } else {
+        egui::Stroke::new(1.0, p.raised.gamma_multiply(0.8))
+    };
+    let gap = if moon { half + 14.0 } else { half };
     let (l, r) = (rect.left() + 16.0, rect.right() - 16.0);
-    if rect.center().x - half > l {
-        ui.painter().hline(l..=rect.center().x - half, y, stroke);
-        ui.painter().hline(rect.center().x + half..=r, y, stroke);
+    if rect.center().x - gap > l {
+        ui.painter().hline(l..=rect.center().x - gap, y, stroke);
+        ui.painter().hline(rect.center().x + gap..=r, y, stroke);
+        if moon {
+            for side in [-1.0, 1.0] {
+                crate::ui::widgets::moon_star(ui.painter(), egui::pos2(rect.center().x + side * (half + 7.0), y), 3.5, p.amber.gamma_multiply(0.8));
+            }
+        }
     }
+    if moon {
+        // the day in a small glass chip with a gold rim
+        let chip = egui::Rect::from_center_size(egui::pos2(rect.center().x, y), egui::vec2(half * 2.0, rect.height()));
+        ui.painter().rect_filled(chip, chip.height() * 0.5, p.indigo_light.gamma_multiply(0.30));
+        ui.painter().rect_stroke(chip, chip.height() * 0.5, egui::Stroke::new(1.0, p.amber.gamma_multiply(0.55)), egui::StrokeKind::Inside);
+    }
+    let ink = if moon { p.ink } else { p.muted_dim };
     let left = rect.center().x - galley.size().x * 0.5;
-    crate::ui::widgets::paint_row_text(ui.painter(), galley, left, y, p.muted_dim);
+    crate::ui::widgets::paint_row_text(ui.painter(), galley, left, y, ink);
     ui.add_space(4.0);
 }
 

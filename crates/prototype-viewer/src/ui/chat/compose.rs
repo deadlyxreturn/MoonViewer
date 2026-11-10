@@ -122,6 +122,11 @@ pub(super) fn show(
             let roomy = width > 520.0;
             let field = egui::Frame::new()
                 .fill(p.raised)
+                .stroke(if p.high_contrast {
+                    egui::Stroke::NONE
+                } else {
+                    egui::Stroke::new(1.0, p.amber.gamma_multiply(0.6))
+                })
                 .corner_radius(ui.visuals().window_corner_radius)
                 .inner_margin(egui::Margin::symmetric(6, 4))
                 .show(ui, |ui| {

@@ -989,6 +989,9 @@ impl<'a> Floater<'a> {
                 if self.id == super::options::WINDOW {
                     let layer = ctx.layer_painter(response.response.layer_id);
                     super::options::paint_window_trim(&layer, p, response.response.rect, radius, minimized);
+                } else if self.id == "conversations" && !minimized {
+                    let layer = ctx.layer_painter(response.response.layer_id);
+                    moon_window_rim(&layer, p, response.response.rect, radius);
                 }
             }
             if !minimized {
@@ -1831,6 +1834,36 @@ pub(crate) fn window_resize_grips(ctx: &egui::Context) -> Option<winit::window::
             });
     }
     started
+}
+
+/// A small four-point star (Moon Viewer's accents), filled.
+pub(crate) fn moon_star(painter: &egui::Painter, center: egui::Pos2, r: f32, color: Color32) {
+    let k = r * 0.28;
+    let pts = vec![
+        center + Vec2::new(0.0, -r),
+        center + Vec2::new(k, -k),
+        center + Vec2::new(r, 0.0),
+        center + Vec2::new(k, k),
+        center + Vec2::new(0.0, r),
+        center + Vec2::new(-k, k),
+        center + Vec2::new(-r, 0.0),
+        center + Vec2::new(-k, -k),
+    ];
+    painter.add(egui::Shape::convex_polygon(pts, color, Stroke::NONE));
+}
+
+/// A thin gold rim with a pearl inner line and a gloss across the top: the
+/// light frame of Moon Viewer's windows. Drawn from the window's rect, so it
+/// follows any size.
+pub(crate) fn moon_window_rim(painter: &egui::Painter, p: &Palette, rect: egui::Rect, radius: f32) {
+    if p.high_contrast {
+        return;
+    }
+    let pale = p.amber.lerp_to_gamma(p.ink, 0.6);
+    let gloss = egui::Rect::from_min_max(rect.min + Vec2::new(2.0, 2.0), egui::pos2(rect.right() - 2.0, rect.top() + 34.0_f32.min(rect.height() * 0.3)));
+    gradient_rect(painter, gloss, (radius - 2.0).max(0.0), p.ink.gamma_multiply(0.12), Color32::TRANSPARENT);
+    painter.rect_stroke(rect.shrink(0.5), radius, Stroke::new(1.3, p.amber.gamma_multiply(0.9)), egui::StrokeKind::Inside);
+    painter.rect_stroke(rect.shrink(2.5), (radius - 2.0).max(0.0), Stroke::new(1.0, pale.gamma_multiply(0.38)), egui::StrokeKind::Inside);
 }
 
 pub(super) fn glass_pill(painter: &egui::Painter, p: &Palette, rect: egui::Rect, selected: bool, hot: bool) -> Color32 {

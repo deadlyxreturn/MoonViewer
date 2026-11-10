@@ -718,7 +718,16 @@ fn plain_head(ui: &mut egui::Ui, p: &Palette, title: &str) {
     ui.add_space(8.0);
     ui.horizontal(|ui| {
         ui.add_space(6.0);
-        ui.label(section_title(ui, p, title));
+        let label = ui.label(section_title(ui, p, title));
+        // Moon Viewer: a fine gold rule to the edge, ending in a star
+        if !p.high_contrast {
+            let y = label.rect.center().y;
+            let (l, r) = (label.rect.right() + 8.0, ui.max_rect().right() - 14.0);
+            if r - l > 20.0 {
+                ui.painter().hline(l..=r - 8.0, y, egui::Stroke::new(1.0, p.amber.gamma_multiply(0.45)));
+                crate::ui::widgets::moon_star(ui.painter(), egui::pos2(r, y), 4.0, p.amber.gamma_multiply(0.85));
+            }
+        }
     });
     ui.add_space(2.0);
 }
