@@ -10401,6 +10401,22 @@ impl App {
         let mut library_drop = None;
         let t_pass = Instant::now();
         let mut windows_ms = 0.0;
+        // Moon Viewer's own glossy minimize, maximize and close buttons are
+        // the window's on the login screen and in-world (classic bars): no
+        // Windows title bar there, so they are never doubled. It comes back
+        // where Moon Viewer draws none (loading, the island bars).
+        {
+            let ours = match self.screen {
+                Screen::Login => true,
+                Screen::World => self.bars_look().0,
+                Screen::Loading { .. } => false,
+            };
+            let borderless = ours && gfx.window.fullscreen().is_none();
+            if gfx.window.is_decorated() == borderless {
+                gfx.window.set_decorations(!borderless);
+            }
+            ctx.data_mut(|d| d.insert_temp(egui::Id::new(ui::widgets::BORDERLESS_KEY), borderless));
+        }
         let mut full = ctx.run_ui(raw, |ui| {
             self.sound_cues.pass_start(ui.ctx());
             // before any field reads its keys: Ctrl+W is the frontmost window's
@@ -14441,22 +14457,6 @@ impl App {
             );
         if !matches!(self.screen, Screen::World) && self.interface.hidden {
             self.interface.set_hidden(&ctx, false);
-        }
-        // Moon Viewer's own glossy minimize, maximize and close buttons are
-        // the window's on the login screen and in-world (classic bars): no
-        // Windows title bar there, so they are never doubled. It comes back
-        // where Moon Viewer draws none (loading, the island bars).
-        if let Some(gfx) = &self.gfx {
-            let ours = match self.screen {
-                Screen::Login => true,
-                Screen::World => self.settings.classic_bars,
-                _ => false,
-            };
-            let borderless = ours && gfx.window.fullscreen().is_none();
-            if gfx.window.is_decorated() == borderless {
-                gfx.window.set_decorations(!borderless);
-            }
-            ctx.data_mut(|d| d.insert_temp(egui::Id::new(ui::widgets::BORDERLESS_KEY), borderless));
         }
         match self.screen {
             Screen::Login => {
