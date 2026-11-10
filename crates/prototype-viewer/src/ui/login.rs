@@ -611,6 +611,20 @@ fn pill_menu(ui: &mut egui::Ui, p: &Palette, icons: &Icons, icon: &str, label: &
     }
 }
 
+/// A plain underlined text link (the card's "Create account" and "Forgot
+/// password?"), lavender-white, brighter while hovered: no button face.
+fn text_link(ui: &mut egui::Ui, p: &Palette, label: &str, url: &str) -> egui::Response {
+    let resp = ui.add(egui::Label::new(RichText::new(label).size(13.5).color(p.ink).underline()).sense(Sense::click()));
+    if resp.hovered() {
+        ui.painter().hline(resp.rect.x_range(), resp.rect.bottom() - 1.0, Stroke::new(1.2, p.amber));
+        ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+    }
+    if resp.clicked() {
+        ui.ctx().open_url(egui::OpenUrl::new_tab(url));
+    }
+    resp.on_hover_text(url)
+}
+
 /// A pill of frosted glass with its icon and label (the card's foot).
 fn pill_button(ui: &mut egui::Ui, p: &Palette, icons: &Icons, icon: &str, label: &str, size: Vec2) -> egui::Response {
     let (r, resp) = ui.allocate_exact_size(size, Sense::click());
@@ -634,13 +648,27 @@ fn pill_button(ui: &mut egui::Ui, p: &Palette, icons: &Icons, icon: &str, label:
             "star-filled" => p.violet_light,
             _ => p.teal,
         };
+        let hot = resp.hovered() || resp.has_focus();
+        if hot {
+            // a soft gold halo while hovered
+            ui.painter().rect_stroke(
+                r.expand(3.0),
+                radius + 3.0,
+                Stroke::new(4.0, p.amber.gamma_multiply(0.20)),
+                egui::StrokeKind::Outside,
+            );
+        }
+        // glossy glass: a light lavender top fading to deep indigo, a
+        // bright reflection and a gold rim (polished_pill)
+        let top = p.indigo_light.lerp_to_gamma(p.ink, 0.18).lerp_to_gamma(tint, 0.25);
+        let bottom = p.navy.lerp_to_gamma(tint, 0.18);
         ui.painter().add(moon::polished_pill(
             ui.ctx(),
             r,
-            p.raised.lerp_to_gamma(tint, 0.63).gamma_multiply(0.78),
-            fill.lerp_to_gamma(tint.gamma_multiply(0.37), 0.22),
-            p.violet_pale,
-            p.amber,
+            top.gamma_multiply(if hot { 0.78 } else { 0.62 }),
+            bottom.gamma_multiply(if hot { 0.80 } else { 0.66 }),
+            p.ink,
+            p.amber.lerp_to_gamma(p.ink, 0.2),
         ));
     }
     let font_size = if size.x < 108.0 { 12.5 } else { 15.5 };
@@ -1029,9 +1057,9 @@ pub fn show(
                             ui.horizontal(|ui| {
                                 let (mark, _) = ui.allocate_exact_size(Vec2::splat(17.0), Sense::hover());
                                 img(ui, icons, "user-plus", mark, p.ink);
-                                ui.hyperlink_to(RichText::new(prototype_i18n::tr!("moon-login-create-account")).color(p.ink), REGISTER_URL);
+                                text_link(ui, p, prototype_i18n::tr!("moon-login-create-account"), REGISTER_URL);
                                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                    ui.hyperlink_to(RichText::new(prototype_i18n::tr!("ui-login-forgot-password")).color(p.ink), FORGOT_PASSWORD_URL);
+                                    text_link(ui, p, prototype_i18n::tr!("ui-login-forgot-password"), FORGOT_PASSWORD_URL);
                                 });
                             });
                             ui.horizontal(|ui| {
