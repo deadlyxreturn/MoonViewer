@@ -36,13 +36,10 @@ pub fn page(cx: &mut Cx, tab: usize) {
                 tr!("ui-options-fade-duration-when-you-change-the-environment-yourself-selector"),
                 &field!(env_manual_transition),
                 |ui, s| {
-                    ui.add(
-                        egui::Slider::new(&mut s.env_manual_transition, 0.0..=60.0)
-                            .custom_parser(prototype_i18n::parse_number)
+                    crate::ui::widgets::star_slider(ui, &mut s.env_manual_transition, 0.0..=60.0, false, |sl| sl.custom_parser(prototype_i18n::parse_number)
                             .step_by(0.5)
                             .suffix(" s")
-                            .trailing_fill(true),
-                    )
+                            .trailing_fill(true))
                     .changed()
                 },
             );
@@ -298,12 +295,9 @@ fn quality(cx: &mut Cx) {
             tr!("ui-options-lod-factor-for-sl-objects-and-meshes-2-by"),
             &field!(lod_factor),
             |ui, s| {
-                ui.add(
-                    egui::Slider::new(&mut s.lod_factor, 0.5..=4.0)
-                        .custom_parser(prototype_i18n::parse_number)
+                crate::ui::widgets::star_slider(ui, &mut s.lod_factor, 0.5..=4.0, false, |sl| sl.custom_parser(prototype_i18n::parse_number)
                         .step_by(0.125)
-                        .trailing_fill(true),
-                )
+                        .trailing_fill(true))
                 .changed()
             },
         );
@@ -312,12 +306,9 @@ fn quality(cx: &mut Cx) {
             tr!("ui-options-maximum-particles-0-disabled"),
             &field!(max_particles),
             |ui, s| {
-                ui.add(
-                    egui::Slider::new(&mut s.max_particles, 0..=8192)
-                        .custom_parser(prototype_i18n::parse_number)
+                crate::ui::widgets::star_slider(ui, &mut s.max_particles, 0..=8192, false, |sl| sl.custom_parser(prototype_i18n::parse_number)
                         .step_by(256.0)
-                        .trailing_fill(true),
-                )
+                        .trailing_fill(true))
                 .changed()
             },
         );
@@ -351,13 +342,10 @@ fn quality(cx: &mut Cx) {
                     tr!("ui-options-video-memory-the-textures-may-use"),
                     &field!(texture_budget_mb),
                     |ui, s| {
-                        ui.add(
-                            egui::Slider::new(&mut s.texture_budget_mb, 256..=32768)
-                                .custom_parser(prototype_i18n::parse_number)
+                        crate::ui::widgets::star_slider(ui, &mut s.texture_budget_mb, 256..=32768, true, |sl| sl.custom_parser(prototype_i18n::parse_number)
                                 .logarithmic(true)
                                 .suffix(tr!("memory-mb-suffix"))
-                                .trailing_fill(true),
-                        )
+                                .trailing_fill(true))
                         .changed()
                     },
                 );
@@ -415,12 +403,9 @@ fn quality(cx: &mut Cx) {
                         format!("{} k", limit / 1000)
                     }
                 };
-                let r = ui.add(
-                    egui::Slider::new(&mut pos, 1..=slider::OFF)
-                        .custom_parser(prototype_i18n::parse_number)
+                let r = crate::ui::widgets::star_slider(ui, &mut pos, 1..=slider::OFF, false, |sl| sl.custom_parser(prototype_i18n::parse_number)
                         .custom_formatter(move |v, _| text(v))
-                        .trailing_fill(true),
-                );
+                        .trailing_fill(true));
                 if r.changed() {
                     s.max_complexity = slider::to_limit(pos);
                 }
@@ -432,9 +417,7 @@ fn quality(cx: &mut Cx) {
             tr!("ui-options-above-this-limit-the-avatar-also-appears-as-a"),
             &field!(max_attachment_area),
             |ui, s| {
-                ui.add(
-                    egui::Slider::new(&mut s.max_attachment_area, 0.0..=10_000.0)
-                        .custom_parser(prototype_i18n::parse_number)
+                crate::ui::widgets::star_slider(ui, &mut s.max_attachment_area, 0.0..=10_000.0, true, |sl| sl.custom_parser(prototype_i18n::parse_number)
                         .logarithmic(true)
                         .step_by(10.0)
                         .custom_formatter(|v, _| {
@@ -444,8 +427,7 @@ fn quality(cx: &mut Cx) {
                                 format!("{v:.0} m²")
                             }
                         })
-                        .trailing_fill(true),
-                )
+                        .trailing_fill(true))
                 .changed()
             },
         );
@@ -477,13 +459,10 @@ fn quality(cx: &mut Cx) {
                 tr!("ui-options-avatar-physics-detail-help"),
                 &field!(avatar_physics_detail),
                 |ui, s| {
-                    ui.add(
-                        egui::Slider::new(&mut s.avatar_physics_detail, 0.0..=1.0)
-                            .custom_parser(prototype_i18n::parse_number)
+                    crate::ui::widgets::star_slider(ui, &mut s.avatar_physics_detail, 0.0..=1.0, false, |sl| sl.custom_parser(prototype_i18n::parse_number)
                             .step_by(0.05)
                             .fixed_decimals(2)
-                            .trailing_fill(true),
-                    )
+                            .trailing_fill(true))
                     .changed()
                 },
             );
@@ -527,14 +506,16 @@ fn light(cx: &mut Cx) {
                 tr!("ui-options-projector-shadow-limit-help"),
                 &field!(projector_shadow_limit),
                 |ui, s| {
-                    ui.add_enabled(
-                        enabled,
-                        egui::Slider::new(
+                    ui.add_enabled_ui(enabled, |ui| {
+                        crate::ui::widgets::star_slider(
+                            ui,
                             &mut s.projector_shadow_limit,
                             1..=prototype_render::projector_shadows::MAX_PROJECTOR_SHADOWS as u8,
+                            false,
+                            |sl| sl.trailing_fill(true),
                         )
-                        .trailing_fill(true),
-                    )
+                    })
+                    .inner
                     .changed()
                 },
             );
@@ -587,12 +568,9 @@ fn light(cx: &mut Cx) {
                 &field!(screen_indirect_intensity),
                 |ui, s| {
                     ui.add_enabled_ui(on, |ui| {
-                        ui.add(
-                            egui::Slider::new(&mut s.screen_indirect_intensity, 0.0..=4.0)
-                                .custom_parser(prototype_i18n::parse_number)
+                        crate::ui::widgets::star_slider(ui, &mut s.screen_indirect_intensity, 0.0..=4.0, false, |sl| sl.custom_parser(prototype_i18n::parse_number)
                                 .step_by(0.1)
-                                .trailing_fill(true),
-                        )
+                                .trailing_fill(true))
                         .changed()
                     })
                     .inner
@@ -606,12 +584,9 @@ fn light(cx: &mut Cx) {
         let hdr = cx.s.hdr_emissive;
         cx.row(tr!("ui-options-exposure"), "", &field!(exposure), |ui, s| {
             let r = ui.add_enabled_ui(hdr, |ui| {
-                ui.add(
-                    egui::Slider::new(&mut s.exposure, 0.25..=4.0)
-                        .custom_parser(prototype_i18n::parse_number)
+                crate::ui::widgets::star_slider(ui, &mut s.exposure, 0.25..=4.0, true, |sl| sl.custom_parser(prototype_i18n::parse_number)
                         .logarithmic(true)
-                        .trailing_fill(true),
-                )
+                        .trailing_fill(true))
                 .changed()
             });
             r.response.on_disabled_hover_text(tr!("ui-options-needs-hdr-emissive"));
@@ -631,12 +606,9 @@ fn light(cx: &mut Cx) {
                 tr!("ui-options-bloom-strength-help"),
                 &field!(bloom_strength),
                 |ui, s| {
-                    ui.add(
-                        egui::Slider::new(&mut s.bloom_strength, 0.05..=1.0)
-                            .custom_parser(prototype_i18n::parse_number)
+                    crate::ui::widgets::star_slider(ui, &mut s.bloom_strength, 0.05..=1.0, false, |sl| sl.custom_parser(prototype_i18n::parse_number)
                             .step_by(0.05)
-                            .trailing_fill(true),
-                    )
+                            .trailing_fill(true))
                     .changed()
                 },
             );
@@ -687,12 +659,9 @@ fn reflections_and_water(cx: &mut Cx) {
             tr!("ui-options-active-probes-around-you-video-memory"),
             &field!(probe_count),
             |ui, s| {
-                ui.add(
-                    egui::Slider::new(&mut s.probe_count, 8..=64)
-                        .custom_parser(prototype_i18n::parse_number)
+                crate::ui::widgets::star_slider(ui, &mut s.probe_count, 8..=64, false, |sl| sl.custom_parser(prototype_i18n::parse_number)
                         .step_by(8.0)
-                        .trailing_fill(true),
-                )
+                        .trailing_fill(true))
                 .changed()
             },
         );
@@ -793,13 +762,10 @@ fn image(cx: &mut Cx) {
             &field!(tonemap_mix),
             |ui, s| {
                 let r = ui.add_enabled_ui(mapped, |ui| {
-                    ui.add(
-                        egui::Slider::new(&mut s.tonemap_mix, 0.0..=1.0)
-                            .custom_parser(prototype_i18n::parse_number)
+                    crate::ui::widgets::star_slider(ui, &mut s.tonemap_mix, 0.0..=1.0, false, |sl| sl.custom_parser(prototype_i18n::parse_number)
                             .step_by(0.1)
                             .fixed_decimals(1)
-                            .trailing_fill(true),
-                    )
+                            .trailing_fill(true))
                     .changed()
                 });
                 r.response.on_disabled_hover_text(why);
@@ -812,12 +778,9 @@ fn image(cx: &mut Cx) {
             &field!(sharpen),
             |ui, s| {
                 let r = ui.add_enabled_ui(hdr, |ui| {
-                    ui.add(
-                        egui::Slider::new(&mut s.sharpen, 0.0..=1.0)
-                            .custom_parser(prototype_i18n::parse_number)
+                    crate::ui::widgets::star_slider(ui, &mut s.sharpen, 0.0..=1.0, false, |sl| sl.custom_parser(prototype_i18n::parse_number)
                             .step_by(0.05)
-                            .trailing_fill(true),
-                    )
+                            .trailing_fill(true))
                     .changed()
                 });
                 r.response.on_disabled_hover_text(tr!("ui-options-needs-hdr-emissive"));
@@ -845,25 +808,19 @@ fn depth_of_field(cx: &mut Cx) {
         suffix: &str,
         decimals: usize,
     ) -> bool {
-        ui.add(
-            egui::Slider::new(v, range)
-                .logarithmic(true)
+        crate::ui::widgets::star_slider(ui, v, range, true, |sl| sl.logarithmic(true)
                 .prefix(prefix)
                 .suffix(suffix)
                 .fixed_decimals(decimals)
                 .custom_parser(prototype_i18n::parse_number)
-                .trailing_fill(true),
-        )
+                .trailing_fill(true))
         .changed()
     }
     fn plain_slider(ui: &mut egui::Ui, v: &mut f32, range: std::ops::RangeInclusive<f32>, suffix: &str, decimals: usize) -> bool {
-        ui.add(
-            egui::Slider::new(v, range)
-                .suffix(suffix)
+        crate::ui::widgets::star_slider(ui, v, range, false, |sl| sl.suffix(suffix)
                 .fixed_decimals(decimals)
                 .custom_parser(prototype_i18n::parse_number)
-                .trailing_fill(true),
-        )
+                .trailing_fill(true))
         .changed()
     }
     cx.group(tr!("ui-options-dof"), |cx| {

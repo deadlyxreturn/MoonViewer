@@ -182,7 +182,7 @@ fn nav_count(v: &View, world: &World, sec: Section) -> Option<String> {
             (usage.max > 0).then(|| prototype_i18n::number_text(&format!("{:.0} %", usage.fraction() * 100.0)))
         }
         Section::Experiences => {
-            let n = world.land.sel.as_ref().map_or(0, |s| s.allowed_experiences.len());
+            let n = world.land.sel.as_ref().map_or(0, |sl| sl.allowed_experiences.len());
             (n > 0).then(|| n.to_string())
         }
         _ => None,
@@ -1517,12 +1517,9 @@ fn environment(ui: &mut egui::Ui, p: &Palette, s: &mut LandUi, v: &View, world: 
     let mut changed = false;
     srow(ui, p, prototype_i18n::tr!("ui-land-environment-day-length-hours"), "", 300.0, |ui| {
         let r = editable(ui, can_enable, |ui| {
-            ui.add(
-                egui::Slider::new(&mut length_h, 4.0..=168.0)
-                    .custom_parser(prototype_i18n::parse_number)
+            crate::ui::widgets::star_slider(ui, &mut length_h, 4.0..=168.0, false, |sl| sl.custom_parser(prototype_i18n::parse_number)
                     .step_by(0.5)
-                    .fixed_decimals(1),
-            )
+                    .fixed_decimals(1))
         });
         dragging |= r.dragged() || r.has_focus();
         changed |= r.changed();
@@ -1530,12 +1527,9 @@ fn environment(ui: &mut egui::Ui, p: &Palette, s: &mut LandUi, v: &View, world: 
     line(ui, p);
     srow(ui, p, prototype_i18n::tr!("ui-land-environment-time-offset-hours"), "", 300.0, |ui| {
         let r = editable(ui, can_enable, |ui| {
-            ui.add(
-                egui::Slider::new(&mut offset_h, -11.5..=12.0)
-                    .custom_parser(prototype_i18n::parse_number)
+            crate::ui::widgets::star_slider(ui, &mut offset_h, -11.5..=12.0, false, |sl| sl.custom_parser(prototype_i18n::parse_number)
                     .step_by(0.5)
-                    .fixed_decimals(1),
-            )
+                    .fixed_decimals(1))
         });
         dragging |= r.dragged() || r.has_focus();
         changed |= r.changed();

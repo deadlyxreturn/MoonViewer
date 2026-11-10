@@ -140,21 +140,21 @@ pub(super) fn show(ui: &mut egui::Ui, p: &Palette, s: &mut LandUi, v: &View, wor
         );
         let (mut length_h, mut offset_h) = day_hours(summary.as_ref(), s.env_drag);
         dim(ui, p, prototype_i18n::tr!("ui-land-environment-day-length-hours"));
-        let r1 = ui.add_enabled(
-            can_enable,
-            egui::Slider::new(&mut length_h, 4.0..=168.0)
-                .custom_parser(prototype_i18n::parse_number)
-                .step_by(0.5)
-                .fixed_decimals(1),
-        );
+        let r1 = ui
+            .add_enabled_ui(can_enable, |ui| {
+                crate::ui::widgets::star_slider(ui, &mut length_h, 4.0..=168.0, false, |sl| {
+                    sl.custom_parser(prototype_i18n::parse_number).step_by(0.5).fixed_decimals(1)
+                })
+            })
+            .inner;
         dim(ui, p, prototype_i18n::tr!("ui-land-environment-time-offset-hours"));
-        let r2 = ui.add_enabled(
-            can_enable,
-            egui::Slider::new(&mut offset_h, -11.5..=12.0)
-                .custom_parser(prototype_i18n::parse_number)
-                .step_by(0.5)
-                .fixed_decimals(1),
-        );
+        let r2 = ui
+            .add_enabled_ui(can_enable, |ui| {
+                crate::ui::widgets::star_slider(ui, &mut offset_h, -11.5..=12.0, false, |sl| {
+                    sl.custom_parser(prototype_i18n::parse_number).step_by(0.5).fixed_decimals(1)
+                })
+            })
+            .inner;
         let dragging = r1.dragged() || r2.dragged() || r1.has_focus() || r2.has_focus();
         if dragging || r1.changed() || r2.changed() {
             s.env_drag = Some((length_h, offset_h));

@@ -967,13 +967,9 @@ impl WorldMapUi {
 
         heading(ui, prototype_i18n::tr!("common-zoom"));
         let mut z = self.target_zoom;
-        if ui
-            .add(
-                egui::Slider::new(&mut z, ZOOM_MIN..=ZOOM_MAX)
-                    .custom_parser(prototype_i18n::parse_number)
+        if crate::ui::widgets::star_slider(ui, &mut z, ZOOM_MIN..=ZOOM_MAX, false, |sl| sl.custom_parser(prototype_i18n::parse_number)
                     .step_by(0.2)
-                    .show_value(false),
-            )
+                    .show_value(false))
             .changed()
         {
             self.target_zoom = z;

@@ -169,12 +169,9 @@ fn trusted_sites(ui: &mut egui::Ui, p: &Palette, sites: &mut crate::link_trust::
 
 fn slider(cx: &mut Cx, label: &str, hint: &str, field: &F<u32>, range: std::ops::RangeInclusive<u32>, suffix: &str) {
     cx.keywords(prototype_i18n::tr!("anti-spam-title")).row(label, hint, field, |ui, s| {
-        ui.add(
-            egui::Slider::new((field.get_mut)(s), range)
-                .suffix(suffix)
+        crate::ui::widgets::star_slider(ui, (field.get_mut)(s), range, false, |sl| sl.suffix(suffix)
                 .custom_parser(prototype_i18n::parse_number)
-                .trailing_fill(true),
-        )
+                .trailing_fill(true))
         .changed()
     });
 }

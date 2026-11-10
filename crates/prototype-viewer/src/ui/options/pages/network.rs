@@ -28,13 +28,10 @@ pub fn page(cx: &mut Cx) {
             tr!("ui-options-maximum-bandwidth-hint"),
             &field!(bandwidth_kbps),
             |ui, s| {
-                ui.add(
-                    egui::Slider::new(&mut s.bandwidth_kbps, 50..=prototype_net::throttle::DEFAULT_KBPS as u32)
-                        .custom_parser(prototype_i18n::parse_number)
+                crate::ui::widgets::star_slider(ui, &mut s.bandwidth_kbps, 50..=prototype_net::throttle::DEFAULT_KBPS as u32, false, |sl| sl.custom_parser(prototype_i18n::parse_number)
                         .step_by(50.0)
                         .suffix(tr!("bandwidth-kbps-suffix"))
-                        .trailing_fill(true),
-                )
+                        .trailing_fill(true))
                 .changed()
             },
         );
@@ -68,13 +65,10 @@ pub fn page(cx: &mut Cx) {
             tr!("ui-options-textures-meshes-animations-shared-across-regions-objects-per-region"),
             &field!(cache_size_mb),
             |ui, s| {
-                ui.add(
-                    egui::Slider::new(&mut s.cache_size_mb, 512..=65536)
-                        .custom_parser(prototype_i18n::parse_number)
+                crate::ui::widgets::star_slider(ui, &mut s.cache_size_mb, 512..=65536, true, |sl| sl.custom_parser(prototype_i18n::parse_number)
                         .logarithmic(true)
                         .suffix(tr!("memory-mb-suffix"))
-                        .trailing_fill(true),
-                )
+                        .trailing_fill(true))
                 .changed()
             },
         );

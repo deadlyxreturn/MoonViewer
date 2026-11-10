@@ -156,39 +156,27 @@ fn movements(ui: &mut egui::Ui, p: &Palette, prototype: &mut Prototype) -> bool 
     widgets::divider(ui, p);
     widgets::switch_labeled(ui, p, &mut prefs.running, prototype_i18n::tr!("movement-running"));
     ui.add_enabled_ui(prefs.running, |ui| {
-        ui.add(
-            egui::Slider::new(&mut prefs.run_multiplier, 1.0..=5.0)
-                .prefix("×")
+        crate::ui::widgets::star_slider(ui, &mut prefs.run_multiplier, 1.0..=5.0, false, |sl| sl.prefix("×")
                 .step_by(0.1)
-                .text(prototype_i18n::tr!("movement-run-multiplier")),
-        );
+                .text(prototype_i18n::tr!("movement-run-multiplier")));
     });
     ui.label(prototype_i18n::tr!("movement-run-help"));
     widgets::divider(ui, p);
     widgets::switch_labeled(ui, p, &mut prefs.fly_assist, prototype_i18n::tr!("movement-fly-assist"));
     ui.add_enabled_ui(prefs.fly_assist, |ui| {
-        ui.add(
-            egui::Slider::new(&mut prefs.fly_multiplier, 1.0..=5.0)
-                .prefix("×")
+        crate::ui::widgets::star_slider(ui, &mut prefs.fly_multiplier, 1.0..=5.0, false, |sl| sl.prefix("×")
                 .step_by(0.1)
-                .text(prototype_i18n::tr!("movement-fly-multiplier")),
-        );
+                .text(prototype_i18n::tr!("movement-fly-multiplier")));
     });
     ui.label(prototype_i18n::tr!("movement-fly-help"));
     widgets::divider(ui, p);
     widgets::switch_labeled(ui, p, &mut prefs.swimming, prototype_i18n::tr!("movement-swimming"));
     ui.add_enabled_ui(prefs.swimming, |ui| {
-        ui.add(
-            egui::Slider::new(&mut prefs.swim_speed, 0.5..=8.0)
-                .suffix(" m/s")
-                .text(prototype_i18n::tr!("movement-swim-speed")),
-        );
-        ui.add(
-            egui::Slider::new(&mut prefs.float_height, -0.5..=0.5)
-                .suffix(" m")
+        crate::ui::widgets::star_slider(ui, &mut prefs.swim_speed, 0.5..=8.0, false, |sl| sl.suffix(" m/s")
+                .text(prototype_i18n::tr!("movement-swim-speed")));
+        crate::ui::widgets::star_slider(ui, &mut prefs.float_height, -0.5..=0.5, false, |sl| sl.suffix(" m")
                 .step_by(0.01)
-                .text(prototype_i18n::tr!("movement-float-height")),
-        );
+                .text(prototype_i18n::tr!("movement-float-height")));
         widgets::checkbox(ui, p, &mut prefs.jump_obstacles, prototype_i18n::tr!("movement-jump-obstacles"));
     });
     ui.label(prototype_i18n::tr!("ao-design-animation-help"));

@@ -381,12 +381,9 @@ fn complexity_row(ui: &mut egui::Ui, p: &Palette, settings: &mut Settings) -> bo
                 format!("{} k", limit / 1000)
             }
         };
-        let response = ui.add(
-            egui::Slider::new(&mut position, 1..=slider::OFF)
-                .custom_parser(prototype_i18n::parse_number)
+        let response = crate::ui::widgets::star_slider(ui, &mut position, 1..=slider::OFF, false, |sl| sl.custom_parser(prototype_i18n::parse_number)
                 .custom_formatter(move |v, _| text(v))
-                .trailing_fill(true),
-        );
+                .trailing_fill(true));
         if response.changed() {
             set_complexity_position(settings, position);
             changed = true;

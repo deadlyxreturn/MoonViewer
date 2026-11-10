@@ -525,15 +525,11 @@ pub(super) fn slider_w(
         );
         // clamped and stepped when moved only: a value off the 0.01 steps
         // (any real sky) stays as it is, and the settings unchanged
-        ui.add(widgets::restricted_number(
-            egui::Slider::new(v, range)
-                .custom_parser(prototype_i18n::parse_number)
+        crate::ui::widgets::star_slider(ui, v, range, false, |sl| sl.custom_parser(prototype_i18n::parse_number)
                 .step_by(0.01)
                 .max_decimals(2)
                 .clamping(egui::SliderClamping::Edits)
-                .trailing_fill(true),
-            widgets::TextPolicy::Decimal,
-        ))
+                .trailing_fill(true))
     })
     .inner
 }

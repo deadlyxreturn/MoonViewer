@@ -503,13 +503,9 @@ fn videos(cx: &mut Cx) {
             |ui, s| {
                 let v = &mut s.link_previews.video_volume;
                 ui.spacing_mut().slider_width = super::super::COMBO_W;
-                let changed = ui
-                    .add(
-                        egui::Slider::new(v, 0.0..=1.0)
-                            .custom_parser(prototype_i18n::parse_number)
+                let changed = crate::ui::widgets::star_slider(ui, v, 0.0..=1.0, false, |sl| sl.custom_parser(prototype_i18n::parse_number)
                             .trailing_fill(true)
-                            .show_value(false),
-                    )
+                            .show_value(false))
                     .changed();
                 ui.label(RichText::new(format!("{:>3.0} %", *v * 100.0)).size(12.0).color(p.muted));
                 changed
@@ -931,9 +927,7 @@ fn away_and_replies(cx: &mut Cx) {
         let get = f.get_mut;
         cx.row(label, hint, f, |ui, s| {
             ui.spacing_mut().slider_width = super::super::SLIDER_W;
-            ui.add(
-                egui::Slider::new(get(s), 0..=60)
-                    .custom_formatter(|v, _| {
+            crate::ui::widgets::star_slider(ui, get(s), 0..=60, false, |sl| sl.custom_formatter(|v, _| {
                         if v == 0.0 {
                             tr!("ui-options-away-disabled").to_owned()
                         } else {
@@ -948,8 +942,7 @@ fn away_and_replies(cx: &mut Cx) {
                             prototype_i18n::parse_number(text.trim_end_matches("min").trim())
                         }
                     })
-                    .trailing_fill(true),
-            )
+                    .trailing_fill(true))
             .changed()
         });
     }

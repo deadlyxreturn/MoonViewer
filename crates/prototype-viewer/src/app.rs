@@ -133,6 +133,19 @@ mod wearable_editor;
 mod world_click_demo;
 mod worn_demo;
 
+/// A window command from Moon Viewer's own caption buttons and title bar.
+/// The actions are handled while the frame holds the window outside
+/// `self.gfx`, so they are queued and carried out right after, with it.
+#[derive(Debug, Clone, Copy)]
+enum WindowCmd {
+    Minimize,
+    ToggleMaximize,
+    Drag,
+    Resize(winit::window::ResizeDirection),
+}
+
+const WINDOW_CMD: &str = "moon_window_cmd";
+
 enum Screen {
     Login,
     Loading { since: Instant },
@@ -10695,6 +10708,25 @@ impl App {
             self.net.set_bandwidth(bandwidth_kbps(&self.settings));
         }
         self.handle_actions(actions, event_loop);
+        // Moon Viewer's caption buttons and title bar, with the window at hand
+        if let Some(cmd) = ctx.data_mut(|d| d.remove_temp::<WindowCmd>(egui::Id::new(WINDOW_CMD))) {
+            let window = &gfx.window;
+            let done = match cmd {
+                WindowCmd::Minimize => {
+                    window.set_minimized(true);
+                    Ok(())
+                }
+                WindowCmd::ToggleMaximize => {
+                    window.set_maximized(!window.is_maximized());
+                    Ok(())
+                }
+                WindowCmd::Drag => window.drag_window(),
+                WindowCmd::Resize(direction) => window.drag_resize_window(direction),
+            };
+            if let Err(e) = done {
+                log::debug!("window command {cmd:?}: {e}");
+            }
+        }
         if self.vr_at_start && self.in_world() {
             // the scene around has a moment to arrive before the headset
             let since = *self.vr_world_since.get_or_insert_with(Instant::now);
@@ -12814,6 +12846,10 @@ impl App {
         self.egui_ctx.copy_text(prototype_version::version().to_owned());
     }
 
+    fn queue_window_cmd(&self, cmd: WindowCmd) {
+        self.egui_ctx.data_mut(|d| d.insert_temp(egui::Id::new(WINDOW_CMD), cmd));
+    }
+
     fn handle_actions(&mut self, a: UiActions, event_loop: &ActiveEventLoop) {
         if let Some(action) = a.exit {
             self.confirm_exit(action);
@@ -12837,30 +12873,10 @@ impl App {
                 }
             }
             LoginAction::Quit => self.request_exit(),
-            LoginAction::Minimize => {
-                if let Some(gfx) = &self.gfx {
-                    gfx.window.set_minimized(true);
-                }
-            }
-            LoginAction::ToggleMaximize => {
-                if let Some(gfx) = &self.gfx {
-                    gfx.window.set_maximized(!gfx.window.is_maximized());
-                }
-            }
-            LoginAction::DragWindow => {
-                if let Some(gfx) = &self.gfx
-                    && let Err(e) = gfx.window.drag_window()
-                {
-                    log::debug!("window drag: {e}");
-                }
-            }
-            LoginAction::ResizeWindow(direction) => {
-                if let Some(gfx) = &self.gfx
-                    && let Err(e) = gfx.window.drag_resize_window(direction)
-                {
-                    log::debug!("window resize: {e}");
-                }
-            }
+            LoginAction::Minimize => self.queue_window_cmd(WindowCmd::Minimize),
+            LoginAction::ToggleMaximize => self.queue_window_cmd(WindowCmd::ToggleMaximize),
+            LoginAction::DragWindow => self.queue_window_cmd(WindowCmd::Drag),
+            LoginAction::ResizeWindow(direction) => self.queue_window_cmd(WindowCmd::Resize(direction)),
             LoginAction::Preferences => ui::widgets::toggle_floater(&self.egui_ctx, ui::options::WINDOW, &mut self.panels.settings),
             LoginAction::Accessibility => {
                 ui::widgets::open_floater(&self.egui_ctx, ui::options::WINDOW, &mut self.panels.settings);
@@ -13000,30 +13016,10 @@ impl App {
             BarAction::ShowHuds(visible) => self.set_show_huds(visible),
             BarAction::HudZoom(zoom) => self.world.hud_zoom = zoom.clamp(0.1, 1.0),
             BarAction::None => {}
-            BarAction::Minimize => {
-                if let Some(gfx) = &self.gfx {
-                    gfx.window.set_minimized(true);
-                }
-            }
-            BarAction::ToggleMaximize => {
-                if let Some(gfx) = &self.gfx {
-                    gfx.window.set_maximized(!gfx.window.is_maximized());
-                }
-            }
-            BarAction::DragWindow => {
-                if let Some(gfx) = &self.gfx
-                    && let Err(e) = gfx.window.drag_window()
-                {
-                    log::debug!("window drag: {e}");
-                }
-            }
-            BarAction::ResizeWindow(direction) => {
-                if let Some(gfx) = &self.gfx
-                    && let Err(e) = gfx.window.drag_resize_window(direction)
-                {
-                    log::debug!("window resize: {e}");
-                }
-            }
+            BarAction::Minimize => self.queue_window_cmd(WindowCmd::Minimize),
+            BarAction::ToggleMaximize => self.queue_window_cmd(WindowCmd::ToggleMaximize),
+            BarAction::DragWindow => self.queue_window_cmd(WindowCmd::Drag),
+            BarAction::ResizeWindow(direction) => self.queue_window_cmd(WindowCmd::Resize(direction)),
             BarAction::IkEdit => {
                 self.ik_editor.toggle();
             }

@@ -27,7 +27,7 @@ pub fn show(ctx: &egui::Context, p: &Palette, open: &mut bool, settings: &mut Se
         ui.horizontal(|ui| {
             ui.label(prototype_i18n::tr!("beacons-width"));
             s.width = s.width.clamp(1, 16);
-            ui.add(egui::Slider::new(&mut s.width, 1..=16));
+            crate::ui::widgets::star_slider(ui, &mut s.width, 1..=16, false, |s| s);
         });
         widgets::divider(ui, p);
         for (on, kind, text) in [

@@ -304,7 +304,7 @@ impl LooksUi {
             );
         });
         slider_row(ui, p, prototype_i18n::tr!("photo-look-strength"), |ui| {
-            ui.add(egui::Slider::new(&mut layer.strength, 0..=100).suffix(" %"))
+            crate::ui::widgets::star_slider(ui, &mut layer.strength, 0..=100, false, |sl| sl.suffix(" %"))
         });
         let Some(prototype) = id.strip_prefix(looks::PROTOTYPE) else {
             let note = if id.starts_with(looks::LUT) {
@@ -365,7 +365,7 @@ fn knob_row(ui: &mut egui::Ui, p: &Palette, knob: &Knob, values: &mut [f32], id:
         Kind::Range { min, max } => {
             let mut percent = ((values[0] - min) / (max - min) * 100.0).clamp(0.0, 100.0);
             slider_row(ui, p, label, |ui| {
-                let resp = ui.add(egui::Slider::new(&mut percent, 0.0..=100.0).fixed_decimals(0).suffix(" %"));
+                let resp = crate::ui::widgets::star_slider(ui, &mut percent, 0.0..=100.0, false, |sl| sl.fixed_decimals(0).suffix(" %"));
                 if resp.changed() {
                     values[0] = min + percent / 100.0 * (max - min);
                 }
@@ -373,22 +373,19 @@ fn knob_row(ui: &mut egui::Ui, p: &Palette, knob: &Knob, values: &mut [f32], id:
             });
         }
         Kind::Meters { min, max } => slider_row(ui, p, label, |ui| {
-            ui.add(egui::Slider::new(&mut values[0], min..=max).fixed_decimals(0).suffix(" m"))
+            crate::ui::widgets::star_slider(ui, &mut values[0], min..=max, false, |sl| sl.fixed_decimals(0).suffix(" m"))
         }),
         Kind::Ratio { min, max } => slider_row(ui, p, label, |ui| {
-            ui.add(
-                egui::Slider::new(&mut values[0], min..=max)
-                    .fixed_decimals(2)
+            crate::ui::widgets::star_slider(ui, &mut values[0], min..=max, false, |sl| sl.fixed_decimals(2)
                     .suffix(":1")
-                    .custom_parser(prototype_i18n::parse_number),
-            )
+                    .custom_parser(prototype_i18n::parse_number))
         }),
         Kind::Hue => slider_row(ui, p, label, |ui| {
-            ui.add(egui::Slider::new(&mut values[0], 0.0..=360.0).fixed_decimals(0).suffix("°"))
+            crate::ui::widgets::star_slider(ui, &mut values[0], 0.0..=360.0, false, |sl| sl.fixed_decimals(0).suffix("°"))
         }),
         Kind::Seed => slider_row(ui, p, label, |ui| {
             let mut seed = values[0].round() as i32;
-            let resp = ui.add(egui::Slider::new(&mut seed, 0..=99));
+            let resp = crate::ui::widgets::star_slider(ui, &mut seed, 0..=99, false, |s| s);
             values[0] = seed as f32;
             resp
         }),

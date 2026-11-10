@@ -262,7 +262,7 @@ fn slider(ui: &mut egui::Ui, p: &Palette, draft: &mut crate::shape_editor::Draft
         let mut percent = (old - param.min) / (param.max - param.min) * 100.0;
         ui.horizontal(|ui| {
             ui.spacing_mut().slider_width = (ui.available_width() - 70.0).max(100.0);
-            let a = ui.add(egui::Slider::new(&mut percent, 0.0..=100.0).show_value(false));
+            let a = crate::ui::widgets::star_slider(ui, &mut percent, 0.0..=100.0, false, |sl| sl.show_value(false));
             let b = ui.add_sized(
                 Vec2::new(62.0, 22.0),
                 egui::DragValue::new(&mut percent)

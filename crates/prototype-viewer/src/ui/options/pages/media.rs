@@ -54,12 +54,8 @@ pub fn page(cx: &mut Cx) {
             |ui, s| {
                 let m = &mut s.media;
                 let mut n = m.max_instances as u32;
-                let ch = ui
-                    .add(
-                        egui::Slider::new(&mut n, 1..=16)
-                            .custom_parser(prototype_i18n::parse_number)
-                            .trailing_fill(true),
-                    )
+                let ch = crate::ui::widgets::star_slider(ui, &mut n, 1..=16, false, |sl| sl.custom_parser(prototype_i18n::parse_number)
+                            .trailing_fill(true))
                     .changed();
                 m.max_instances = n as usize;
                 ch

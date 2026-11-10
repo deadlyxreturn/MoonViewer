@@ -480,7 +480,7 @@ impl SnapshotUi {
         crate::ui::spelling::field(ui, p, &mut message, &mut form.message, false);
         row(ui, p, prototype_i18n::tr!("photo-jpeg-quality"), None, |ui| {
             ui.spacing_mut().slider_width = 130.0;
-            ui.add(egui::Slider::new(&mut s.jpeg_quality, 1..=100));
+            crate::ui::widgets::star_slider(ui, &mut s.jpeg_quality, 1..=100, false, |s| s);
         });
     }
 
@@ -637,7 +637,7 @@ impl SnapshotUi {
                 if s.format == FileFormat::Jpeg {
                     row(ui, p, prototype_i18n::tr!("photo-jpeg-quality"), None, |ui| {
                         ui.spacing_mut().slider_width = 130.0;
-                        ui.add(egui::Slider::new(&mut s.jpeg_quality, 1..=100));
+                        crate::ui::widgets::star_slider(ui, &mut s.jpeg_quality, 1..=100, false, |s| s);
                     });
                 }
             }
@@ -1033,14 +1033,11 @@ fn dof_rows(ui: &mut egui::Ui, p: &Palette, d: &mut crate::dof::PhotoDof) {
             // the slider, then its value, like the focal length's
             ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
                 ui.spacing_mut().slider_width = (ui.available_width() - 72.0).max(60.0);
-                ui.add(
-                    egui::Slider::new(&mut d.f_number, 1.0..=22.0)
-                        .logarithmic(true)
+                crate::ui::widgets::star_slider(ui, &mut d.f_number, 1.0..=22.0, true, |sl| sl.logarithmic(true)
                         .prefix("f/")
                         .fixed_decimals(1)
                         .clamping(egui::SliderClamping::Edits)
-                        .custom_parser(prototype_i18n::parse_number),
-                );
+                        .custom_parser(prototype_i18n::parse_number));
             });
         });
         row(ui, p, prototype_i18n::tr!("photo-dof-focus"), None, |ui| {
@@ -1059,14 +1056,11 @@ fn dof_rows(ui: &mut egui::Ui, p: &Palette, d: &mut crate::dof::PhotoDof) {
             row(ui, p, prototype_i18n::tr!("photo-dof-distance"), None, |ui| {
                 ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
                     ui.spacing_mut().slider_width = (ui.available_width() - 72.0).max(60.0);
-                    ui.add(
-                        egui::Slider::new(&mut d.distance, 0.3..=200.0)
-                            .logarithmic(true)
+                    crate::ui::widgets::star_slider(ui, &mut d.distance, 0.3..=200.0, true, |sl| sl.logarithmic(true)
                             .suffix(" m")
                             .fixed_decimals(1)
                             .clamping(egui::SliderClamping::Edits)
-                            .custom_parser(prototype_i18n::parse_number),
-                    );
+                            .custom_parser(prototype_i18n::parse_number));
                 });
             });
         }

@@ -2063,6 +2063,43 @@ pub fn paint_slider_knob(ui: &egui::Ui, p: &Palette, resp: &egui::Response, frac
     white_knob(painter, p, center, 7.5, hot, true);
 }
 
+/// Any slider of the interface in Moon Viewer's look: the stock slider (its
+/// value field, steps, parser…) with its handle hidden, the pink rail and
+/// the gold star knob painted over it. `build` adds the options to the
+/// stock slider; `log` when it is logarithmic (the knob follows the scale).
+pub(crate) fn star_slider<T: egui::emath::Numeric>(
+    ui: &mut egui::Ui,
+    value: &mut T,
+    range: std::ops::RangeInclusive<T>,
+    log: bool,
+    build: impl FnOnce(egui::Slider<'_>) -> egui::Slider<'_>,
+) -> egui::Response {
+    let p = crate::theme::Theme::current_palette(ui.ctx());
+    if p.high_contrast {
+        return ui.add(build(egui::Slider::new(value, range)));
+    }
+    let resp = ui
+        .scope(|ui| {
+            let w = &mut ui.visuals_mut().widgets;
+            for state in [&mut w.inactive, &mut w.hovered, &mut w.active] {
+                state.bg_fill = Color32::TRANSPARENT;
+                state.fg_stroke = Stroke::NONE;
+            }
+            ui.add(build(egui::Slider::new(value, range.clone())).trailing_fill(false))
+        })
+        .inner;
+    let (a, b, v) = (range.start().to_f64(), range.end().to_f64(), value.to_f64());
+    let f = if log && a > 0.0 && b > a && v > 0.0 {
+        (v.ln() - a.ln()) / (b.ln() - a.ln())
+    } else if (b - a).abs() < f64::EPSILON {
+        0.0
+    } else {
+        (v - a) / (b - a)
+    };
+    paint_slider_knob(ui, &p, &resp, f as f32);
+    resp
+}
+
 /// Check box of the interface, with the contract of `ui.checkbox`: the
 /// response is `changed()` when a click flipped `on`. A flat square with the
 /// corners of the theme, violet and ticked when on; the square and its label

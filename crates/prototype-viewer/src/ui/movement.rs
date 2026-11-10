@@ -41,12 +41,12 @@ impl MovementUi {
         ui.columns(2, |columns| {
             widgets::switch_labeled(&mut columns[0], p, &mut prefs.running, prototype_i18n::tr!("movement-running"));
             columns[0].add_enabled_ui(prefs.running, |ui| {
-                ui.add(egui::Slider::new(&mut prefs.run_multiplier, 1.0..=5.0).prefix("×").step_by(0.1))
+                crate::ui::widgets::star_slider(ui, &mut prefs.run_multiplier, 1.0..=5.0, false, |sl| sl.prefix("×").step_by(0.1))
                     .on_hover_text(prototype_i18n::tr!("movement-run-speed"));
             });
             widgets::switch_labeled(&mut columns[1], p, &mut prefs.fly_assist, prototype_i18n::tr!("movement-fly-assist"));
             columns[1].add_enabled_ui(prefs.fly_assist, |ui| {
-                ui.add(egui::Slider::new(&mut prefs.fly_multiplier, 1.0..=5.0).prefix("×").step_by(0.1))
+                crate::ui::widgets::star_slider(ui, &mut prefs.fly_multiplier, 1.0..=5.0, false, |sl| sl.prefix("×").step_by(0.1))
                     .on_hover_text(prototype_i18n::tr!("movement-flight-speed"));
             });
         });
@@ -94,17 +94,11 @@ impl MovementUi {
             super::ao::swimming_warning(ui, p);
         }
         ui.add_enabled_ui(prefs.swimming, |ui| {
-            ui.add(
-                egui::Slider::new(&mut prefs.swim_speed, 0.5..=8.0)
-                    .suffix(" m/s")
-                    .text(prototype_i18n::tr!("movement-swim-speed")),
-            );
-            ui.add(
-                egui::Slider::new(&mut prefs.float_height, -0.5..=0.5)
-                    .suffix(" m")
+            crate::ui::widgets::star_slider(ui, &mut prefs.swim_speed, 0.5..=8.0, false, |sl| sl.suffix(" m/s")
+                    .text(prototype_i18n::tr!("movement-swim-speed")));
+            crate::ui::widgets::star_slider(ui, &mut prefs.float_height, -0.5..=0.5, false, |sl| sl.suffix(" m")
                     .step_by(0.01)
-                    .text(prototype_i18n::tr!("movement-float-height")),
-            )
+                    .text(prototype_i18n::tr!("movement-float-height")))
             .on_hover_text(prototype_i18n::tr!("movement-float-help"));
             ui.add_space(ui.spacing().item_spacing.y * 2.0);
             widgets::checkbox(ui, p, &mut prefs.jump_obstacles, prototype_i18n::tr!("movement-jump-obstacles"));

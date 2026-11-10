@@ -121,14 +121,10 @@ pub fn page(cx: &mut Cx, tab: usize) {
                         // Keyboard zoom can go beyond the preference slider's
                         // narrower range; merely displaying it must not clamp it.
                         ui.spacing_mut().slider_width = super::super::SLIDER_W;
-                        let ch = ui
-                            .add(
-                                egui::Slider::new(&mut deg, FOV_RANGE.start().to_degrees()..=FOV_RANGE.end().to_degrees())
-                                    .suffix("°")
+                        let ch = crate::ui::widgets::star_slider(ui, &mut deg, FOV_RANGE.start().to_degrees()..=FOV_RANGE.end().to_degrees(), false, |sl| sl.suffix("°")
                                     .custom_parser(prototype_i18n::parse_number)
                                     .trailing_fill(true)
-                                    .clamping(egui::SliderClamping::Edits),
-                            )
+                                    .clamping(egui::SliderClamping::Edits))
                             .changed();
                         if ch {
                             c.fov = deg.to_radians();

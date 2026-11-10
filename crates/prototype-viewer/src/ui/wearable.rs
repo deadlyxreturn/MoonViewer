@@ -298,13 +298,8 @@ pub fn show(
                                 // Always-clamped sliders round stored percentages
                                 // on every paint. That dirties fractional defaults
                                 // and can restart the bake debounce indefinitely.
-                                if ui
-                                    .add(widgets::restricted_number(
-                                        egui::Slider::new(&mut percent, 0.0..=100.0)
-                                            .clamping(egui::SliderClamping::Edits)
-                                            .fixed_decimals(0),
-                                        widgets::TextPolicy::Decimal,
-                                    ))
+                                if crate::ui::widgets::star_slider(ui, &mut percent, 0.0..=100.0, false, |sl| sl.clamping(egui::SliderClamping::Edits)
+                                            .fixed_decimals(0))
                                     .changed()
                                 {
                                     let next = param.min + percent / 100.0 * (param.max - param.min);

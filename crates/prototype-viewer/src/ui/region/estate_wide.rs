@@ -297,12 +297,9 @@ fn advanced(ui: &mut egui::Ui, p: &Palette, s: &mut RegionUi, world: &mut World,
     let mut slider =
         |ui: &mut egui::Ui, value: &mut f32, range: std::ops::RangeInclusive<f32>, step: f64, decimals: usize, enabled: bool| {
             let r = editable(ui, enabled, |ui| {
-                ui.add(
-                    egui::Slider::new(value, range)
-                        .custom_parser(prototype_i18n::parse_number)
+                crate::ui::widgets::star_slider(ui, value, range, false, |sl| sl.custom_parser(prototype_i18n::parse_number)
                         .step_by(step)
-                        .fixed_decimals(decimals),
-                )
+                        .fixed_decimals(decimals))
             });
             dragging |= r.dragged() || r.has_focus();
             changed |= r.changed();
@@ -353,12 +350,9 @@ fn advanced(ui: &mut egui::Ui, p: &Palette, s: &mut RegionUi, world: &mut World,
                 });
             }
             let r = editable(ui, can, |ui| {
-                ui.add(
-                    egui::Slider::new(&mut alts[(sky - 2) as usize], ALT_MIN..=ALT_MAX)
-                        .step_by(25.0)
+                crate::ui::widgets::star_slider(ui, &mut alts[(sky - 2) as usize], ALT_MIN..=ALT_MAX, false, |sl| sl.step_by(25.0)
                         .fixed_decimals(0)
-                        .suffix(" m"),
-                )
+                        .suffix(" m"))
             });
             alt_dragging |= r.dragged() || r.has_focus();
             alt_changed |= r.changed();

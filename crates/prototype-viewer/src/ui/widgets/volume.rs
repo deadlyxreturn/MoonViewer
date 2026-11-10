@@ -111,7 +111,7 @@ pub fn volume_slider_with(
     style: impl for<'a> FnOnce(egui::Slider<'a>) -> egui::Slider<'a>,
 ) -> egui::Response {
     let mut position = volume_position(*value, scale, perceptual);
-    let r = ui.add_enabled(enabled, style(egui::Slider::new(&mut position, 0.0..=1.0)));
+    let r = ui.add_enabled_ui(enabled, |ui| super::star_slider(ui, &mut position, 0.0..=1.0, false, style)).inner;
     if r.changed() {
         *value = volume_value(position, scale, perceptual);
     }

@@ -38,11 +38,8 @@ impl FollowUi {
             ui.label(prototype_i18n::tr!("follow-distance"));
             settings.distance = settings.bounded_distance();
             ui.spacing_mut().slider_width = (ui.available_width() - 80.0).max(80.0);
-            let slider = ui.add(
-                egui::Slider::new(&mut settings.distance, FollowSettings::MIN_DISTANCE..=FollowSettings::MAX_DISTANCE)
-                    .step_by(0.1)
-                    .suffix(" m"),
-            );
+            let slider = crate::ui::widgets::star_slider(ui, &mut settings.distance, FollowSettings::MIN_DISTANCE..=FollowSettings::MAX_DISTANCE, false, |sl| sl.step_by(0.1)
+                    .suffix(" m"));
             actions.changed |= slider.changed();
             let toggle = widgets::switch_labeled(ui, p, &mut settings.teleport_if_stuck, prototype_i18n::tr!("follow-teleport-if-stuck"))
                 .on_hover_text(prototype_i18n::tr!("follow-teleport-if-stuck-tip"));
