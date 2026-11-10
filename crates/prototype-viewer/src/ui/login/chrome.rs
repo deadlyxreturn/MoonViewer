@@ -28,6 +28,16 @@ fn menu_bar(ctx: &Context, p: &Palette, form: &mut LoginForm) -> LoginAction {
                 .show(ui, |ui| {
                     ui.set_width((screen.width() - 30.0).max(0.0));
                     ui.set_min_height(29.0);
+                    // The bar is the window's title bar: drag its empty part
+                    // to move the window, double-click it to maximize. The
+                    // menus and buttons added after it take the clicks first.
+                    let strip = Rect::from_min_size(screen.min, vec2(screen.width(), 39.0));
+                    let grab = ui.interact(strip, Id::unique("moon_login_window_drag"), egui::Sense::click_and_drag());
+                    if grab.double_clicked() {
+                        action = LoginAction::ToggleMaximize;
+                    } else if grab.drag_started() {
+                        action = LoginAction::DragWindow;
+                    }
                     if !p.high_contrast {
                         let strip = Rect::from_min_size(screen.min, vec2(screen.width(), 39.0));
                         widgets::gradient_rect(
@@ -163,6 +173,44 @@ fn caption_controls(ctx: &Context, p: &Palette, action: &mut LoginAction) {
         });
 }
 
+/// Thin grips along the window's edges and corners that resize it, in place
+/// of the Windows frame the login screen goes without. Each is its own small
+/// area, so they never cover the screen's other controls.
+fn resize_edges(ctx: &Context, action: &mut LoginAction) {
+    use winit::window::ResizeDirection as Dir;
+    if ctx.input(|i| i.viewport().maximized.unwrap_or(false) || i.viewport().fullscreen.unwrap_or(false)) {
+        return;
+    }
+    const EDGE: f32 = 5.0;
+    const CORNER: f32 = 12.0;
+    let s = ctx.content_rect();
+    let (l, r, t, b) = (s.left(), s.right(), s.top(), s.bottom());
+    let zones = [
+        (Rect::from_min_max(pos2(l, t), pos2(l + CORNER, t + CORNER)), Dir::NorthWest, egui::CursorIcon::ResizeNorthWest),
+        (Rect::from_min_max(pos2(r - CORNER, t), pos2(r, t + CORNER)), Dir::NorthEast, egui::CursorIcon::ResizeNorthEast),
+        (Rect::from_min_max(pos2(l, b - CORNER), pos2(l + CORNER, b)), Dir::SouthWest, egui::CursorIcon::ResizeSouthWest),
+        (Rect::from_min_max(pos2(r - CORNER, b - CORNER), pos2(r, b)), Dir::SouthEast, egui::CursorIcon::ResizeSouthEast),
+        (Rect::from_min_max(pos2(l + CORNER, t), pos2(r - CORNER, t + EDGE)), Dir::North, egui::CursorIcon::ResizeNorth),
+        (Rect::from_min_max(pos2(l + CORNER, b - EDGE), pos2(r - CORNER, b)), Dir::South, egui::CursorIcon::ResizeSouth),
+        (Rect::from_min_max(pos2(l, t + CORNER), pos2(l + EDGE, b - CORNER)), Dir::West, egui::CursorIcon::ResizeWest),
+        (Rect::from_min_max(pos2(r - EDGE, t + CORNER), pos2(r, b - CORNER)), Dir::East, egui::CursorIcon::ResizeEast),
+    ];
+    for (i, (zone, dir, cursor)) in zones.into_iter().enumerate() {
+        egui::Area::new(Id::unique(("moon_login_resize", i)))
+            .order(egui::Order::Foreground)
+            .fixed_pos(zone.min)
+            .show(ctx, |ui| {
+                let grip = ui.allocate_rect(zone, egui::Sense::drag());
+                if grip.hovered() || grip.dragged() {
+                    ui.ctx().set_cursor_icon(cursor);
+                }
+                if grip.drag_started() {
+                    *action = LoginAction::ResizeWindow(dir);
+                }
+            });
+    }
+}
+
 pub fn sidebar(ctx: &Context, p: &Palette, icons: &Icons, info: &LoginInfo, card: Rect, width: f32, lowest: f32) -> bool {
     let left = ctx.content_rect().right() - 32.0 - width;
     egui::Area::new(Id::unique("login_news"))
@@ -222,6 +270,7 @@ pub fn footer(ctx: &Context, p: &Palette, icons: &Icons, info: &LoginInfo, sideb
             }
         });
     caption_controls(ctx, p, &mut action);
+    resize_edges(ctx, &mut action);
     if form.show_info {
         let id = Id::unique("accounts_news_dialog");
         prototype_render::blurred_backdrop(ctx, egui::Modal::default_area(id).layer());

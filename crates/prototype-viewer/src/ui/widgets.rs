@@ -986,7 +986,8 @@ impl<'a> Floater<'a> {
                         radius,
                     );
                 }
-                if self.id == super::options::WINDOW {
+                // Moon Viewer's gold frame: Preferences and the messenger
+                if self.id == super::options::WINDOW || self.id == "conversations" {
                     let layer = ctx.layer_painter(response.response.layer_id);
                     super::options::paint_window_trim(&layer, p, response.response.rect, radius, minimized);
                 }

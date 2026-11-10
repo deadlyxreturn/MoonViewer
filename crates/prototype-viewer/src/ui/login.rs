@@ -112,6 +112,11 @@ pub enum LoginAction {
     Quit,
     Minimize,
     ToggleMaximize,
+    /// A press and drag on the empty part of the top bar moves the window
+    /// (Moon Viewer has no Windows title bar on the login screen).
+    DragWindow,
+    /// A drag on one of the window's edges or corners resizes it.
+    ResizeWindow(winit::window::ResizeDirection),
     CheckUpdates,
     /// The cogwheel: the preferences window over the login screen.
     Preferences,

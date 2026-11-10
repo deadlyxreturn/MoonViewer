@@ -12831,6 +12831,20 @@ impl App {
                     gfx.window.set_maximized(!gfx.window.is_maximized());
                 }
             }
+            LoginAction::DragWindow => {
+                if let Some(gfx) = &self.gfx
+                    && let Err(e) = gfx.window.drag_window()
+                {
+                    log::debug!("window drag: {e}");
+                }
+            }
+            LoginAction::ResizeWindow(direction) => {
+                if let Some(gfx) = &self.gfx
+                    && let Err(e) = gfx.window.drag_resize_window(direction)
+                {
+                    log::debug!("window resize: {e}");
+                }
+            }
             LoginAction::Preferences => ui::widgets::toggle_floater(&self.egui_ctx, ui::options::WINDOW, &mut self.panels.settings),
             LoginAction::Accessibility => {
                 ui::widgets::open_floater(&self.egui_ctx, ui::options::WINDOW, &mut self.panels.settings);
@@ -14403,6 +14417,15 @@ impl App {
             );
         if !matches!(self.screen, Screen::World) && self.interface.hidden {
             self.interface.set_hidden(&ctx, false);
+        }
+        // Moon Viewer's own glossy minimize, maximize and close buttons are
+        // the window's on the login screen: no Windows title bar there, so
+        // they are never doubled. It comes back on the other screens.
+        if let Some(gfx) = &self.gfx {
+            let borderless = matches!(self.screen, Screen::Login) && gfx.window.fullscreen().is_none();
+            if gfx.window.is_decorated() == borderless {
+                gfx.window.set_decorations(!borderless);
+            }
         }
         match self.screen {
             Screen::Login => {
