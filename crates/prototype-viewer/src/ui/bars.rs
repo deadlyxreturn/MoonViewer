@@ -1877,6 +1877,13 @@ pub fn top_bars(
                     })
                     .on_hover_text(prototype_i18n::tr!("ui-bars-prototype-menu"));
                 }
+                // Moon Viewer's wordmark, as on the login screen
+                if !p.high_contrast && ui.ctx().content_rect().width() >= 1100.0 {
+                    let font = egui::FontId::new(17.0, super::fonts::display_serif(ui.ctx()));
+                    ui.label(RichText::new("MOON VIEWER").font(font).extra_letter_spacing(0.8).color(p.ink));
+                    ui.add_space(4.0);
+                    ui.separator();
+                }
                 // then the menus by name, as the Legacy Viewer's menu bar
                 // (menu_viewer.xml: Avatar, Comm, World, Build, Content,
                 // Advanced, Help), each one the same tree's sub-menu
@@ -2136,6 +2143,15 @@ pub fn top_bars(
         });
     if let Some((painter, slot)) = glass {
         super::widgets::finish_bar_glass(&painter, slot, bar.response.rect, p);
+    }
+    if !p.high_contrast {
+        // Moon Viewer: a pearl sheen over the bar and a glowing gold edge
+        let r = bar.response.rect;
+        let painter = ui.painter();
+        let sheen = egui::Rect::from_min_max(r.min, egui::pos2(r.right(), r.center().y));
+        super::widgets::gradient_rect(painter, sheen, 0.0, p.ink.gamma_multiply(0.12), Color32::TRANSPARENT);
+        painter.hline(r.x_range(), r.bottom() + 1.0, egui::Stroke::new(3.0, p.amber.gamma_multiply(0.16)));
+        painter.hline(r.x_range(), r.bottom(), egui::Stroke::new(1.2, p.amber.gamma_multiply(0.85)));
     }
     // the window's edges resize it (no Windows frame)
     if super::widgets::window_borderless(ui.ctx())

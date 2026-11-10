@@ -372,8 +372,15 @@ fn tool(ui: &mut egui::Ui, p: &Palette, rect: egui::Rect, icon: &str, tip: &str,
         },
     );
     let radius = ui.visuals().widgets.inactive.corner_radius;
-    if tone == Tone::Active || (resp.hovered() && tone != Tone::Off) {
-        ui.painter().rect_filled(rect, radius, p.raised.gamma_multiply(0.7));
+    if p.high_contrast {
+        if tone == Tone::Active || (resp.hovered() && tone != Tone::Off) {
+            ui.painter().rect_filled(rect, radius, p.raised.gamma_multiply(0.7));
+        }
+    } else {
+        // Moon Viewer: a round glossy glass button
+        let d = rect.width().min(rect.height()) - 2.0;
+        let disc = egui::Rect::from_center_size(rect.center(), egui::Vec2::splat(d));
+        crate::ui::widgets::moon_glass(ui.painter(), p, disc, d * 0.5, resp.hovered() && tone != Tone::Off, tone == Tone::Active);
     }
     let color: Color32 = match tone {
         Tone::Live => p.success,

@@ -795,15 +795,9 @@ pub fn section(ui: &mut Ui, p: &Palette, title: &str) {
 }
 
 fn paint_icon(painter: &egui::Painter, icon: &str, rect: egui::Rect, tint: Color32) {
-    match super::icons::global(icon) {
-        Some(t) => {
-            let uv = egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0));
-            painter.image(t.id(), rect, uv, tint);
-        }
-        // no icon theme: a small dot keeps the column aligned
-        None => {
-            painter.circle_filled(rect.center(), 2.0, tint);
-        }
+    // no icon theme: a small dot keeps the column aligned
+    if !super::icons::draw(painter, icon, rect, tint) {
+        painter.circle_filled(rect.center(), 2.0, tint);
     }
 }
 

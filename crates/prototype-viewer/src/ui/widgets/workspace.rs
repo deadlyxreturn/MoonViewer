@@ -77,10 +77,7 @@ pub fn caret_room(size: f32) -> f32 {
 
 /// A Tabler icon painted `size` wide, centered on `center`.
 pub fn paint_glyph(painter: &egui::Painter, name: &str, center: egui::Pos2, size: f32, color: Color32) {
-    if let Some(icon) = crate::ui::icons::global(name) {
-        let uv = egui::Rect::from_min_max(egui::Pos2::ZERO, egui::pos2(1.0, 1.0));
-        painter.image(icon.id(), egui::Rect::from_center_size(center, Vec2::splat(size)), uv, color);
-    }
+    crate::ui::icons::draw(painter, name, egui::Rect::from_center_size(center, Vec2::splat(size)), color);
 }
 
 /// The mark of an experimental option: a small amber warning triangle in
@@ -100,14 +97,7 @@ pub fn experimental_mark(ui: &egui::Ui, p: &Palette, rect: egui::Rect, id: egui:
 
 pub fn glyph(ui: &mut egui::Ui, name: &str, color: Color32, size: f32) {
     let (rect, _) = ui.allocate_exact_size(Vec2::splat(size), Sense::hover());
-    if let Some(icon) = crate::ui::icons::global(name) {
-        ui.painter().image(
-            icon.id(),
-            rect,
-            egui::Rect::from_min_max(egui::Pos2::ZERO, egui::pos2(1.0, 1.0)),
-            color,
-        );
-    }
+    crate::ui::icons::draw(ui.painter(), name, rect, color);
 }
 
 /// Height of a sidebar entry (Prototype: roomier than upstream's 34).

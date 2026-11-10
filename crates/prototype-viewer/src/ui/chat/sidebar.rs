@@ -130,7 +130,11 @@ pub(super) fn search_id() -> egui::Id {
 /// box with its magnifier, no outline.
 fn search_box(ui: &mut egui::Ui, p: &Palette, text: &mut String, width: f32) {
     let (rect, _) = ui.allocate_exact_size(egui::vec2(width, SEARCH_H), egui::Sense::hover());
-    ui.painter().rect_filled(rect, ui.visuals().widgets.inactive.corner_radius, p.field);
+    if p.high_contrast {
+        ui.painter().rect_filled(rect, ui.visuals().widgets.inactive.corner_radius, p.field);
+    } else {
+        crate::ui::widgets::moon_glass(ui.painter(), p, rect, rect.height() * 0.5, false, false);
+    }
     let glass = egui::Rect::from_center_size(egui::pos2(rect.left() + 15.0, rect.center().y), egui::Vec2::splat(13.0));
     super::thread::paint_icon(ui.painter(), "search-filled", glass, p.muted_dim);
     let field = egui::Rect::from_min_max(
@@ -168,7 +172,11 @@ fn new_conversation(ui: &mut egui::Ui, p: &Palette, world: &World, st: &mut Chat
     let resp = ui.interact(rect, control_id("new-conversation"), egui::Sense::click());
     let open = egui::Popup::is_id_open(ui.ctx(), egui::Popup::default_response_id(&resp));
     let face = if resp.hovered() || open { p.raised } else { p.field };
-    ui.painter().rect_filled(rect, ui.visuals().widgets.inactive.corner_radius, face);
+    if p.high_contrast {
+        ui.painter().rect_filled(rect, ui.visuals().widgets.inactive.corner_radius, face);
+    } else {
+        crate::ui::widgets::moon_glass(ui.painter(), p, rect.shrink(1.0), rect.height() * 0.5 - 1.0, resp.hovered() || open, false);
+    }
     super::thread::paint_icon(
         ui.painter(),
         "plus",

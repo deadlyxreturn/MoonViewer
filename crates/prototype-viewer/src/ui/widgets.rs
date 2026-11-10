@@ -1876,6 +1876,34 @@ pub(crate) fn moon_star(painter: &egui::Painter, center: egui::Pos2, r: f32, col
     painter.add(egui::Shape::convex_polygon(pts, color, Stroke::NONE));
 }
 
+/// Moon Viewer's glossy glass face: light lavender glass with a pearl
+/// reflection on its upper half and a pearl rim (gold when hot), pink when
+/// active. For pills (radius = half the height), discs and fields.
+pub(crate) fn moon_glass(painter: &egui::Painter, p: &Palette, rect: egui::Rect, radius: f32, hot: bool, active: bool) {
+    if p.high_contrast {
+        painter.rect_filled(rect, radius, if active { p.violet } else { p.field });
+        painter.rect_stroke(rect, radius, Stroke::new(1.0, p.ink), egui::StrokeKind::Inside);
+        return;
+    }
+    let (top, bottom) = if active {
+        (p.rose.lerp_to_gamma(p.ink, 0.3).gamma_multiply(0.9), p.rose.gamma_multiply(0.6))
+    } else if hot {
+        (p.indigo_light.lerp_to_gamma(p.ink, 0.25).gamma_multiply(0.62), p.navy.gamma_multiply(0.42))
+    } else {
+        (p.indigo_light.lerp_to_gamma(p.ink, 0.2).gamma_multiply(0.48), p.navy.gamma_multiply(0.34))
+    };
+    gradient_rect(painter, rect, radius, top, bottom);
+    let shine = egui::Rect::from_min_max(
+        rect.min + Vec2::new(radius.min(rect.width() * 0.25) * 0.5 + 1.5, 1.5),
+        egui::pos2(rect.right() - radius.min(rect.width() * 0.25) * 0.5 - 1.5, rect.top() + rect.height() * 0.48),
+    );
+    if shine.is_positive() {
+        gradient_rect(painter, shine, (radius - 2.0).max(1.0), p.ink.gamma_multiply(0.34), Color32::TRANSPARENT);
+    }
+    let rim = if hot || active { p.amber.lerp_to_gamma(p.ink, 0.35) } else { p.ink.gamma_multiply(0.42) };
+    painter.rect_stroke(rect, radius, Stroke::new(1.2, rim), egui::StrokeKind::Inside);
+}
+
 /// A thin gold rim with a pearl inner line and a gloss across the top: the
 /// light frame of Moon Viewer's windows. Drawn from the window's rect, so it
 /// follows any size.
@@ -1884,10 +1912,13 @@ pub(crate) fn moon_window_rim(painter: &egui::Painter, p: &Palette, rect: egui::
         return;
     }
     let pale = p.amber.lerp_to_gamma(p.ink, 0.6);
-    let gloss = egui::Rect::from_min_max(rect.min + Vec2::new(2.0, 2.0), egui::pos2(rect.right() - 2.0, rect.top() + 34.0_f32.min(rect.height() * 0.3)));
-    gradient_rect(painter, gloss, (radius - 2.0).max(0.0), p.ink.gamma_multiply(0.12), Color32::TRANSPARENT);
-    painter.rect_stroke(rect.shrink(0.5), radius, Stroke::new(1.3, p.amber.gamma_multiply(0.9)), egui::StrokeKind::Inside);
-    painter.rect_stroke(rect.shrink(2.5), (radius - 2.0).max(0.0), Stroke::new(1.0, pale.gamma_multiply(0.38)), egui::StrokeKind::Inside);
+    let gloss = egui::Rect::from_min_max(rect.min + Vec2::new(4.0, 4.0), egui::pos2(rect.right() - 4.0, rect.top() + 46.0_f32.min(rect.height() * 0.35)));
+    gradient_rect(painter, gloss, (radius - 4.0).max(0.0), p.ink.gamma_multiply(0.18), Color32::TRANSPARENT);
+    // a thick pearl band like a glass bezel, between two gold lines
+    painter.rect_stroke(rect.shrink(1.0), radius, Stroke::new(6.0, p.ink.gamma_multiply(0.16)), egui::StrokeKind::Inside);
+    painter.rect_stroke(rect.shrink(1.5), radius, Stroke::new(2.0, p.ink.gamma_multiply(0.22)), egui::StrokeKind::Inside);
+    painter.rect_stroke(rect.shrink(0.5), radius, Stroke::new(1.4, p.amber.gamma_multiply(0.95)), egui::StrokeKind::Inside);
+    painter.rect_stroke(rect.shrink(6.5), (radius - 6.0).max(0.0), Stroke::new(1.0, pale.gamma_multiply(0.55)), egui::StrokeKind::Inside);
 }
 
 pub(super) fn glass_pill(painter: &egui::Painter, p: &Palette, rect: egui::Rect, selected: bool, hot: bool) -> Color32 {
@@ -1903,15 +1934,15 @@ pub(super) fn glass_pill(painter: &egui::Painter, p: &Palette, rect: egui::Rect,
         painter.rect_filled(rect.expand(1.4), radius + 1.4, p.rose.gamma_multiply(0.35));
         gradient_rect(painter, rect, radius, p.violet_light, p.indigo.lerp_to_gamma(p.rose, 0.52));
     } else {
-        let gloss = if hot { 0.50 } else { 0.32 };
-        gradient_rect(painter, rect, radius, p.indigo_light.gamma_multiply(gloss), p.navy.gamma_multiply(0.25));
+        let gloss = if hot { 0.62 } else { 0.46 };
+        gradient_rect(painter, rect, radius, p.indigo_light.lerp_to_gamma(p.ink, 0.15).gamma_multiply(gloss), p.navy.gamma_multiply(0.30));
     }
     let top = egui::Rect::from_min_max(rect.min + egui::vec2(4.0, 1.8), egui::pos2(rect.right() - 4.0, rect.center().y));
-    gradient_rect(painter, top, top.height() * 0.45, pearl.gamma_multiply(0.32), Color32::TRANSPARENT);
+    gradient_rect(painter, top, top.height() * 0.45, pearl.gamma_multiply(0.42), Color32::TRANSPARENT);
     let rim = if selected || hot {
         p.amber.lerp_to_gamma(pearl, 0.45)
     } else {
-        p.indigo_light.gamma_multiply(0.42)
+        pearl.gamma_multiply(0.55)
     };
     painter.rect_stroke(rect, radius, Stroke::new(1.0, rim), egui::StrokeKind::Inside);
     if selected { p.on_accent } else { p.ink }

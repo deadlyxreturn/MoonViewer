@@ -820,6 +820,72 @@ pub fn global(name: &str) -> Option<egui::TextureHandle> {
     GLOBAL.read().ok()?.as_ref()?.get(name).cloned()
 }
 
+/// Moon Viewer's generated gold icon standing in for a font-style icon
+/// name, wherever the app draws that name.
+pub fn moon_for(name: &str) -> Option<&'static str> {
+    Some(match name {
+        "messages-filled" | "message-circle-filled" | "Command_Chat_Icon" => "moon-conversations",
+        "microphone-filled" | "microphone" => "moon-voice",
+        "headphones-filled" | "headphones" => "moon-headphones",
+        "users" | "users-group" => "moon-people",
+        "user-filled" | "user" => "moon-profile",
+        "briefcase-filled" | "briefcase" => "moon-inventory",
+        "shirt-filled" | "shirt" => "moon-appearance",
+        "walk" => "moon-movement",
+        "video-filled" | "video" => "moon-camera",
+        "map" | "map-2" => "moon-worldmap",
+        "compass-filled" | "compass" => "moon-minimap",
+        "search-filled" | "search" => "moon-search",
+        "map-pin-filled" | "map-pin" => "moon-places",
+        "camera-filled" | "camera" => "moon-photo",
+        "hand-move" | "hand-stop" => "moon-gestures",
+        "settings-filled" | "settings" => "moon-preferences",
+        "phone-filled" | "phone" => "moon-call",
+        "send-filled" | "send" | "send-2" => "moon-send",
+        "mood-smile-filled" | "mood-smile" => "moon-emoji",
+        "bell-filled" | "bell" => "moon-notifications",
+        "home-filled" | "home" | "Home_Off" => "moon-home",
+        "star-filled" | "star" => "moon-favorites",
+        "eye-filled" | "eye" => "moon-mouselook",
+        "gauge-filled" | "gauge" => "moon-performance",
+        "box" | "cube" => "moon-build",
+        "sunset-2-filled" | "sun-moon" => "moon-environments",
+        "help-circle-filled" | "info-circle-filled" | "info-circle" => "moon-info",
+        "world" | "world-www" => "moon-webbrowser",
+        "chart-bar" => "moon-statistics",
+        "history" | "clock" => "moon-teleporthistory",
+        "radar" | "radar-2" => "moon-radar",
+        "bookmark-filled" | "bookmark" => "moon-landmark",
+        "photo" | "photo-filled" => "moon-texturelibrary",
+        "message-2-filled" | "messages" => "moon-chatlog",
+        "player-record-filled" => "moon-record",
+        "armchair" | "armchair-2" => "moon-sit",
+        "feather" => "moon-fly",
+        "signpost" => "moon-destinations",
+        _ => return None,
+    })
+}
+
+/// Draws an icon by name: Moon Viewer's gold icon when it has one (full
+/// colour, keeping the tint's opacity), else the named icon tinted.
+/// Returns false when there is neither.
+pub fn draw(painter: &egui::Painter, name: &str, rect: egui::Rect, tint: egui::Color32) -> bool {
+    let uv = egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0));
+    if let Some(t) = moon_for(name).and_then(global) {
+        // greyed icons stay faint, others show their own gold
+        let a = tint.a();
+        let dim = tint.r().max(tint.g()).max(tint.b()) < 90;
+        let shade = if dim { egui::Color32::from_white_alpha((a as f32 * 0.45) as u8) } else { egui::Color32::from_white_alpha(a) };
+        painter.image(t.id(), rect.expand(rect.width() * 0.08), uv, shade);
+        return true;
+    }
+    if let Some(t) = global(name) {
+        painter.image(t.id(), rect, uv, tint);
+        return true;
+    }
+    false
+}
+
 #[derive(Default)]
 pub struct Icons {
     map: HashMap<String, egui::TextureHandle>,

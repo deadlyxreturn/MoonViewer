@@ -495,14 +495,7 @@ fn picture(ui: &mut egui::Ui, env: &mut LineEnv, line: &ChatLine, name: &str, wh
 pub(super) fn paint_icon(painter: &egui::Painter, icon: &str, rect: egui::Rect, color: Color32) {
     // a name that is not built in would paint nothing (a blank button)
     debug_assert!(crate::ui::icons::embedded(icon), "icon {icon:?} is not embedded");
-    if let Some(t) = crate::ui::icons::global(icon) {
-        painter.image(
-            t.id(),
-            rect,
-            egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
-            color,
-        );
-    }
+    crate::ui::icons::draw(painter, icon, rect, color);
 }
 
 /// A notice of the viewer (someone online, a call, an automatic response):

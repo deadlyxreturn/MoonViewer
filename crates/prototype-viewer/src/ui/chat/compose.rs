@@ -125,9 +125,9 @@ pub(super) fn show(
                 .stroke(if p.high_contrast {
                     egui::Stroke::NONE
                 } else {
-                    egui::Stroke::new(1.0, p.amber.gamma_multiply(0.6))
+                    egui::Stroke::new(1.3, p.amber.lerp_to_gamma(p.ink, 0.45).gamma_multiply(0.8))
                 })
-                .corner_radius(ui.visuals().window_corner_radius)
+                .corner_radius(if p.high_contrast { ui.visuals().window_corner_radius } else { egui::CornerRadius::same(20) })
                 .inner_margin(egui::Margin::symmetric(6, 4))
                 .show(ui, |ui| {
                     ui.set_width(ui.available_width());
