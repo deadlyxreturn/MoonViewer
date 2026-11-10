@@ -831,9 +831,14 @@ impl<'a> Floater<'a> {
                                 let moon_title = self.id == "conversations" && !p.high_contrast;
                                 if moon_title {
                                     // Moon Viewer: a gold crescent and a star before the name
-                                    let (rect, _) = ui.allocate_exact_size(Vec2::new(30.0, 18.0), Sense::hover());
-                                    paint_glyph(ui.painter(), "moon-filled", rect.left_center() + Vec2::new(9.0, 0.0), 17.0, p.amber);
-                                    moon_star(ui.painter(), rect.left_center() + Vec2::new(24.0, -1.0), 4.2, p.amber.lerp_to_gamma(p.ink, 0.3));
+                                    let (rect, _) = ui.allocate_exact_size(Vec2::new(26.0, 22.0), Sense::hover());
+                                    if let Some(t) = super::icons::global("moon-crest") {
+                                        let uv = egui::Rect::from_min_max(egui::Pos2::ZERO, egui::pos2(1.0, 1.0));
+                                        ui.painter().image(t.id(), egui::Rect::from_center_size(rect.center(), Vec2::splat(24.0)), uv, Color32::WHITE);
+                                    } else {
+                                        paint_glyph(ui.painter(), "moon-filled", rect.left_center() + Vec2::new(9.0, 0.0), 17.0, p.amber);
+                                        moon_star(ui.painter(), rect.left_center() + Vec2::new(22.0, -1.0), 4.2, p.amber);
+                                    }
                                 } else {
                                     let icon = if big { "moon-brand" } else { framed_header.unwrap_or_else(|| workspace::window_icon(self.id)) };
                                     let (rect, _) = ui.allocate_exact_size(Vec2::splat(if big { 30.0 } else { 17.0 }), Sense::hover());
@@ -1862,6 +1867,11 @@ pub(crate) fn window_resize_grips(ctx: &egui::Context) -> Option<winit::window::
 
 /// A small four-point star (Moon Viewer's accents), filled.
 pub(crate) fn moon_star(painter: &egui::Painter, center: egui::Pos2, r: f32, color: Color32) {
+    if let Some(t) = super::icons::global("moon-star") {
+        let uv = egui::Rect::from_min_max(egui::Pos2::ZERO, egui::pos2(1.0, 1.0));
+        painter.image(t.id(), egui::Rect::from_center_size(center, Vec2::splat(r * 2.6)), uv, Color32::from_white_alpha(color.a().max(200)));
+        return;
+    }
     let k = r * 0.28;
     let pts = vec![
         center + Vec2::new(0.0, -r),

@@ -530,6 +530,12 @@ const PNGS: &[(&str, &[u8])] = &[
     ("moon-statistics", include_bytes!("../../assets/icons/moon/moon-statistics.png")),
     ("moon-info", include_bytes!("../../assets/icons/moon/moon-info.png")),
     ("moon-chatlog", include_bytes!("../../assets/icons/moon/moon-chatlog.png")),
+    ("moon-crest", include_bytes!("../../assets/icons/moon/moon-crest.png")),
+    ("moon-crescent", include_bytes!("../../assets/icons/moon/moon-crescent.png")),
+    ("moon-star", include_bytes!("../../assets/icons/moon/moon-star.png")),
+    ("moon-badge", include_bytes!("../../assets/icons/moon/moon-badge.png")),
+    ("moon-menu", include_bytes!("../../assets/icons/moon/moon-menu.png")),
+    ("moon-gem", include_bytes!("../../assets/icons/moon/moon-gem.png")),
 ];
 
 /// Firestorm icon names used by skins / layouts -> Tabler icon.
@@ -824,6 +830,7 @@ pub fn global(name: &str) -> Option<egui::TextureHandle> {
 /// name, wherever the app draws that name.
 pub fn moon_for(name: &str) -> Option<&'static str> {
     Some(match name {
+        "moon-filled" | "moon" | "moon-brand" => "moon-crescent",
         "messages-filled" | "message-circle-filled" | "Command_Chat_Icon" => "moon-conversations",
         "microphone-filled" | "microphone" => "moon-voice",
         "headphones-filled" | "headphones" => "moon-headphones",
