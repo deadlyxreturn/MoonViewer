@@ -1,6 +1,6 @@
 //! Decorative login elements. Hit targets and actions stay in the login form.
 use crate::theme::Palette;
-use egui::{Color32, Painter, Pos2, Rect, Shape, Stroke, StrokeKind, pos2, vec2};
+use egui::{Color32, Painter, Pos2, Rect, Shape, Stroke, StrokeKind, Vec2, pos2, vec2};
 
 use super::super::widgets::gradient_rect_shape;
 
@@ -113,13 +113,34 @@ pub(super) fn connect_button(painter: &Painter, rect: Rect, p: &Palette, active:
     if !p.high_contrast
         && let Some(texture) = super::super::prototype_art::texture(painter.ctx(), super::super::prototype_art::Art::Connect)
     {
-        let size = vec2(rect.width() + 18.0, 118.0);
-        let bounds = Rect::from_center_size(rect.center() - vec2(0.0, size.y * 0.015), size);
-        let opacity = if active { 255 } else { 242 };
+        // Measured on the 2172×724 source: the gold-rimmed pill spans 78 % of
+        // the art's width and 42 % of its height, its centre sits at
+        // (50.5 %, 52.3 %). Size the art so that pill lines up with the
+        // fields above (the card's width) and centre it on the label; the
+        // wings and the crescent overhang it as in the concept.
+        const PILL_W: f32 = 0.78;
+        const PILL_H: f32 = 0.424;
+        const CENTER: Vec2 = vec2(0.5053, 0.5228);
+        let pill_w = (rect.width() - 6.0).max(1.0);
+        let pill_h = 54.0;
+        let size = vec2(pill_w / PILL_W, pill_h / PILL_H);
+        let bounds = Rect::from_center_size(rect.center() - (CENTER - vec2(0.5, 0.5)) * size, size);
+        let opacity = if active { 255 } else { 235 };
         painter.image(texture.id(), bounds, full_uv(), Color32::from_white_alpha(opacity));
+        // the pink face inside the gold rim
+        let face = Rect::from_center_size(rect.center(), vec2(size.x * 0.7565, size.y * 0.355));
         if hot {
-            let rim = rect.shrink2(vec2(rect.width() * 0.125, 4.0));
-            painter.rect_stroke(rim, rim.height() * 0.5, Stroke::new(1.5, p.violet_pale), StrokeKind::Outside);
+            // a soft sheen on the face and a rose glow, no hard outline
+            painter.rect_filled(face, face.height() * 0.5, Color32::from_white_alpha(26));
+            painter.rect_stroke(
+                face.expand(6.0),
+                face.height() * 0.5 + 6.0,
+                Stroke::new(5.0, p.rose.gamma_multiply(0.22)),
+                StrokeKind::Outside,
+            );
+        } else if !active {
+            // not ready to log in yet: a slightly muted face
+            painter.rect_filled(face, face.height() * 0.5, p.navy.gamma_multiply(0.18));
         }
         return;
     }
