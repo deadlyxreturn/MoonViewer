@@ -10709,7 +10709,12 @@ impl App {
         }
         self.handle_actions(actions, event_loop);
         // Moon Viewer's caption buttons and title bar, with the window at hand
-        if let Some(cmd) = ctx.data_mut(|d| d.remove_temp::<WindowCmd>(egui::Id::new(WINDOW_CMD))) {
+        let cmd_id = egui::Id::new(WINDOW_CMD);
+        if let Some(cmd) = ctx.data_mut(|d| {
+            let cmd = d.get_temp::<WindowCmd>(cmd_id);
+            d.remove::<WindowCmd>(cmd_id);
+            cmd
+        }) {
             let window = &gfx.window;
             let done = match cmd {
                 WindowCmd::Minimize => {
