@@ -2403,6 +2403,28 @@ fn content(ui: &egui::Ui, rect: egui::Rect, look: ButtonLook, text: &str) -> (Op
     (icon_rect, Some((start + lead, room)))
 }
 
+/// Moon Viewer's gold icon for a toolbar command, if it has one.
+fn moon_tool_icon(command: &str) -> Option<&'static str> {
+    Some(match command {
+        "conversations" => "moon-conversations",
+        "speak" | "voice" => "moon-voice",
+        "move" => "moon-movement",
+        "view" => "moon-camera",
+        "people" | "friends" => "moon-people",
+        "inventory" => "moon-inventory",
+        "gestures" => "moon-gestures",
+        "appearance" => "moon-appearance",
+        "search" => "moon-search",
+        "places" => "moon-places",
+        "snapshot" => "moon-photo",
+        "worldmap" => "moon-worldmap",
+        "minimap" => "moon-minimap",
+        "preferences" => "moon-preferences",
+        "ao" => "moon-ao",
+        _ => return None,
+    })
+}
+
 #[allow(clippy::too_many_arguments)]
 fn tool_button(
     ui: &mut egui::Ui,
@@ -2430,7 +2452,25 @@ fn tool_button(
     let ready = super::toolbar::ready(command) && usable;
     // `locked`: RLVa would refuse its action, greyed without a hover face
     let hovered = ready && !locked && resp.hovered();
-    if let Some(fill) = tool_fill(p, ready && active, hovered).or_else(|| look.editing.then(|| p.raised.gamma_multiply(0.55))) {
+    let moon = !p.high_contrast && !look.editing;
+    if moon {
+        // Moon Viewer: every button a slim glossy glass pill with a gold
+        // rim, the active one pink (the concept's bottom bar)
+        let face = rect.shrink2(Vec2::new(1.0, 2.0));
+        let rr = 6.0;
+        let (top, bottom) = if ready && active {
+            (p.rose.lerp_to_gamma(p.ink, 0.25).gamma_multiply(0.85), p.rose.gamma_multiply(0.55))
+        } else if hovered {
+            (p.indigo_light.gamma_multiply(0.62), p.navy.gamma_multiply(0.40))
+        } else {
+            (p.indigo_light.gamma_multiply(0.34), p.navy.gamma_multiply(0.28))
+        };
+        super::widgets::gradient_rect(painter, face, rr, top, bottom);
+        let gloss = egui::Rect::from_min_max(face.min + Vec2::new(2.0, 1.0), egui::pos2(face.right() - 2.0, face.center().y));
+        super::widgets::gradient_rect(painter, gloss, rr - 1.0, p.ink.gamma_multiply(if hovered { 0.30 } else { 0.20 }), Color32::TRANSPARENT);
+        let rim = if hovered || active { p.amber.lerp_to_gamma(p.ink, 0.3) } else { p.amber.gamma_multiply(0.55) };
+        painter.rect_stroke(face, rr, egui::Stroke::new(1.0, rim), egui::StrokeKind::Inside);
+    } else if let Some(fill) = tool_fill(p, ready && active, hovered).or_else(|| look.editing.then(|| p.raised.gamma_multiply(0.55))) {
         painter.rect_filled(rect, radius, fill);
     }
     // the Conversations button's flash (`ButtonFlash`), the minimized bar's
@@ -2448,7 +2488,19 @@ fn tool_button(
         p.muted
     };
     let (icon_rect, text) = content(ui, rect, look, label);
-    if let Some(ir) = icon_rect
+    // the gold icon, full colour (dimmed when the command cannot run)
+    let gold = (!p.high_contrast).then(|| moon_tool_icon(command)).flatten().and_then(|n| icons.get(n));
+    let gold_drawn = if let Some(ir) = icon_rect
+        && let Some(t) = gold
+    {
+        let shade = if !ready || locked { Color32::from_white_alpha(110) } else { Color32::WHITE };
+        painter.image(t.id(), ir.expand(1.5), egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)), shade);
+        true
+    } else {
+        false
+    };
+    if !gold_drawn
+        && let Some(ir) = icon_rect
         && let Some(t) = icons.get(icon)
     {
         painter.image(
@@ -2459,6 +2511,7 @@ fn tool_button(
         );
     }
     if icon == "AO"
+        && !gold_drawn
         && let Some(ir) = icon_rect
     {
         // centered on the letters' ink like the icons beside it: the line box

@@ -478,7 +478,35 @@ const FILLED: &[(&str, &[u8])] = svg_list!(
 const BRAND_SVGS: &[(&str, &[u8])] = &[("moon-brand", include_bytes!("../../../../assets/branding/moon-menu-mark.svg"))];
 
 /// Raster images kept as PNG (brand logo).
-const PNGS: &[(&str, &[u8])] = &[("phoenix_18", include_bytes!("../../assets/icons/phoenix_18.png"))];
+/// Moon Viewer's gold icons (cut from its icon sheet) are full-colour: draw
+/// them with a white tint.
+const PNGS: &[(&str, &[u8])] = &[
+    ("phoenix_18", include_bytes!("../../assets/icons/phoenix_18.png")),
+    ("moon-conversations", include_bytes!("../../assets/icons/moon/moon-conversations.png")),
+    ("moon-voice", include_bytes!("../../assets/icons/moon/moon-voice.png")),
+    ("moon-people", include_bytes!("../../assets/icons/moon/moon-people.png")),
+    ("moon-inventory", include_bytes!("../../assets/icons/moon/moon-inventory.png")),
+    ("moon-appearance", include_bytes!("../../assets/icons/moon/moon-appearance.png")),
+    ("moon-movement", include_bytes!("../../assets/icons/moon/moon-movement.png")),
+    ("moon-camera", include_bytes!("../../assets/icons/moon/moon-camera.png")),
+    ("moon-worldmap", include_bytes!("../../assets/icons/moon/moon-worldmap.png")),
+    ("moon-minimap", include_bytes!("../../assets/icons/moon/moon-minimap.png")),
+    ("moon-search", include_bytes!("../../assets/icons/moon/moon-search.png")),
+    ("moon-places", include_bytes!("../../assets/icons/moon/moon-places.png")),
+    ("moon-photo", include_bytes!("../../assets/icons/moon/moon-photo.png")),
+    ("moon-gestures", include_bytes!("../../assets/icons/moon/moon-gestures.png")),
+    ("moon-ao", include_bytes!("../../assets/icons/moon/moon-ao.png")),
+    ("moon-preferences", include_bytes!("../../assets/icons/moon/moon-preferences.png")),
+    ("moon-minimize", include_bytes!("../../assets/icons/moon/moon-minimize.png")),
+    ("moon-maximize", include_bytes!("../../assets/icons/moon/moon-maximize.png")),
+    ("moon-close", include_bytes!("../../assets/icons/moon/moon-close.png")),
+    ("moon-send", include_bytes!("../../assets/icons/moon/moon-send.png")),
+    ("moon-emoji", include_bytes!("../../assets/icons/moon/moon-emoji.png")),
+    ("moon-teleport", include_bytes!("../../assets/icons/moon/moon-teleport.png")),
+    ("moon-profile", include_bytes!("../../assets/icons/moon/moon-profile.png")),
+    ("moon-call", include_bytes!("../../assets/icons/moon/moon-call.png")),
+    ("moon-notifications", include_bytes!("../../assets/icons/moon/moon-notifications.png")),
+];
 
 /// Firestorm icon names used by skins / layouts -> Tabler icon.
 const ALIASES: &[(&str, &str)] = &[
