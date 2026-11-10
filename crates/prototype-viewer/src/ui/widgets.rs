@@ -828,7 +828,13 @@ impl<'a> Floater<'a> {
                         buttons_left = ui.cursor().right();
                         if truncate {
                             ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
-                                {
+                                let moon_title = self.id == "conversations" && !p.high_contrast;
+                                if moon_title {
+                                    // Moon Viewer: a gold crescent and a star before the name
+                                    let (rect, _) = ui.allocate_exact_size(Vec2::new(30.0, 18.0), Sense::hover());
+                                    paint_glyph(ui.painter(), "moon-filled", rect.left_center() + Vec2::new(9.0, 0.0), 17.0, p.amber);
+                                    moon_star(ui.painter(), rect.left_center() + Vec2::new(24.0, -1.0), 4.2, p.amber.lerp_to_gamma(p.ink, 0.3));
+                                } else {
                                     let icon = if big { "moon-brand" } else { framed_header.unwrap_or_else(|| workspace::window_icon(self.id)) };
                                     let (rect, _) = ui.allocate_exact_size(Vec2::splat(if big { 30.0 } else { 17.0 }), Sense::hover());
                                     let bear = if big { super::prototype_art::texture(ui.ctx(), super::prototype_art::Art::Bear) } else { None };
@@ -845,6 +851,14 @@ impl<'a> Floater<'a> {
                                         );
                                     }
                                 }
+                                let title = if moon_title {
+                                    RichText::new(&self.title)
+                                        .font(egui::FontId::new(17.0, super::fonts::display_serif(ui.ctx())))
+                                        .italics()
+                                        .color(p.ink)
+                                } else {
+                                    title
+                                };
                                 ui.add(egui::Label::new(title).truncate());
                                 if let Some(note) = &self.title_note {
                                     ui.add(egui::Label::new(RichText::new(note).size(12.0).color(p.muted)).truncate());
@@ -1518,8 +1532,18 @@ fn paint_title_button(ui: &egui::Ui, p: &Palette, icon: &str, resp: &egui::Respo
         let hot = resp.hovered();
         let face = egui::Rect::from_center_size(c, Vec2::splat(r * 2.0));
         let fill = if hot { p.indigo } else { p.field };
-        ui.painter().rect_filled(face, 7, fill);
-        ui.painter().rect_stroke(face, 7, border_stroke(p, Stroke::new(1.0, p.amber.gamma_multiply(0.74))), egui::StrokeKind::Inside);
+        if p.high_contrast {
+            ui.painter().rect_filled(face, 7, fill);
+        } else {
+            gradient_rect(ui.painter(), face, 6.0, p.indigo_light.gamma_multiply(if hot { 0.62 } else { 0.42 }), p.navy.gamma_multiply(0.38));
+            if icon == "x" && hot {
+                ui.painter().rect_filled(face, 6, p.rose.gamma_multiply(0.55));
+            }
+            let top = egui::Rect::from_min_max(face.min + Vec2::new(2.5, 1.2), egui::pos2(face.right() - 2.5, face.center().y));
+            gradient_rect(ui.painter(), top, 4.0, p.ink.gamma_multiply(0.32), Color32::TRANSPARENT);
+        }
+        let rim = if hot { p.amber.lerp_to_gamma(p.ink, 0.35) } else { p.amber.gamma_multiply(0.74) };
+        ui.painter().rect_stroke(face, 7, border_stroke(p, Stroke::new(1.0, rim)), egui::StrokeKind::Inside);
         let stroke = Stroke::new(if hot { 2.0 } else { 1.7 }, p.ink);
         let painter = ui.painter();
         match icon {
