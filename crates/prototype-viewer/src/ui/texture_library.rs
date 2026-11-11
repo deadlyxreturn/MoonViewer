@@ -34,30 +34,6 @@ use uuid::Uuid;
 pub const ICON: &str = "stack-2-filled";
 pub const VERTICAL: &str = "texture_library_vertical";
 pub const HORIZONTAL: &str = "texture_library_horizontal";
-
-pub(crate) fn can_export_texture(
-    item: &prototype_net::inventory::InvItem,
-    agent: Uuid,
-    in_item_group: bool,
-    require_creator: bool,
-) -> bool {
-    let full = rules::COPY | rules::MODIFY | rules::TRANSFER;
-    // LLViewerInventoryItem::checkPermissionsSet selects the mask for the current agent.
-    let effective = if item.owner == agent && !item.group_owned {
-        item.base_mask
-    } else if in_item_group {
-        item.group_mask
-    } else {
-        item.everyone_mask
-    };
-    !agent.is_nil()
-        && matches!(item.asset_type, 0 | 15)
-        && !item.asset_id.is_nil()
-        && item.owner_mask & full == full
-        && effective & full == full
-        && (!require_creator || item.creator == agent)
-}
-
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Presentation {
     #[default]
@@ -162,8 +138,8 @@ pub enum Action {
 #[derive(Default)]
 pub struct LibraryUi {
     export_folder: Option<crossbeam_channel::Receiver<Option<std::path::PathBuf>>>,
-    export_items: Vec<windows::ExportRequest>,
-    export_queue: std::collections::VecDeque<(windows::ExportRequest, std::path::PathBuf)>,
+    export_items: Vec<(Uuid, bool)>,
+    export_queue: std::collections::VecDeque<(Uuid, std::path::PathBuf, bool)>,
     export_jobs: Vec<windows::BatchExport>,
     export_error: Option<String>,
     catalogue: Catalogue,
@@ -311,8 +287,11 @@ impl LibraryUi {
                 }
                 let entries = self.filtered(prefs);
                 let empty = entries.is_empty();
+                let selected_index = entries
+                    .iter()
+                    .position(|index| Some(self.catalogue.entries[*index].id) == self.selected);
                 if horizontal {
-                    egui::ScrollArea::horizontal()
+                    widgets::search_scroll_to_column(ui, egui::ScrollArea::horizontal(), selected_index, 48.0)
                         .id_salt("library_strip")
                         .max_height(61.0)
                         .show_viewport(ui, |ui, viewport| {
@@ -348,32 +327,37 @@ impl LibraryUi {
                     // the cards in exactly the room the selection and the
                     // warnings leave
                     let (mut list, foot) = widgets::above_footer(ui);
-                    egui::ScrollArea::vertical()
-                        .id_salt("library_grid")
-                        .max_height(list.available_height())
-                        .show_rows(&mut list, row_height, rows, |ui, visible| {
-                            for row in visible {
-                                ui.horizontal(|ui| {
-                                    for index in entries.iter().skip(row * 2).take(2) {
-                                        let entry = self.catalogue.entries[*index].clone();
-                                        if let Some(action) = self.card(
-                                            ui,
-                                            p,
-                                            world,
-                                            scene,
-                                            images,
-                                            prefs,
-                                            &entry,
-                                            106.0,
-                                            true,
-                                            entries.first() == Some(index),
-                                        ) {
-                                            actions.push(action);
-                                        }
+                    widgets::search_scroll_to_row(
+                        &list,
+                        egui::ScrollArea::vertical(),
+                        selected_index.map(|index| index / 2),
+                        row_height,
+                    )
+                    .id_salt("library_grid")
+                    .max_height(list.available_height())
+                    .show_rows(&mut list, row_height, rows, |ui, visible| {
+                        for row in visible {
+                            ui.horizontal(|ui| {
+                                for index in entries.iter().skip(row * 2).take(2) {
+                                    let entry = self.catalogue.entries[*index].clone();
+                                    if let Some(action) = self.card(
+                                        ui,
+                                        p,
+                                        world,
+                                        scene,
+                                        images,
+                                        prefs,
+                                        &entry,
+                                        106.0,
+                                        true,
+                                        entries.first() == Some(index),
+                                    ) {
+                                        actions.push(action);
                                     }
-                                });
-                            }
-                        });
+                                }
+                            });
+                        }
+                    });
                     foot.show(ui, |ui| {
                         ui.horizontal(|ui| {
                             if let Some(entry) = self
@@ -634,11 +618,11 @@ impl LibraryUi {
         if horizontal {
             ui.horizontal(|ui| {
                 row(self, ui);
-                widgets::search_field(ui, &mut self.search, prototype_i18n::tr!("common-search"), 160.0);
+                widgets::search_field(ui, p, &mut self.search, prototype_i18n::tr!("common-search"), 160.0);
                 self.filters(ui, p, prefs);
             });
         } else {
-            widgets::search_field(ui, &mut self.search, prototype_i18n::tr!("common-search"), ui.available_width());
+            widgets::search_field(ui, p, &mut self.search, prototype_i18n::tr!("common-search"), ui.available_width());
             ui.horizontal(|ui| row(self, ui));
             ui.horizontal(|ui| self.filters(ui, p, prefs));
         }

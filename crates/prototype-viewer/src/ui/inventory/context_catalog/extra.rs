@@ -290,18 +290,12 @@ pub(super) fn build(c: &mut Catalog, inv: &Inventory, id: Uuid, st: &InventoryUi
         );
     }
     if complete_selection && selected.iter().all(|item| matches!(item.asset_type, 0 | 15)) || all {
-        let permitted = |png: bool| {
-            complete_selection
-                && !trash
-                && selected.iter().all(|item| {
-                    crate::ui::texture_library::can_export_texture(
-                        item,
-                        facts.agent,
-                        facts.groups.contains(&item.group_id),
-                        !single && !png,
-                    )
-                })
-        };
+        let permitted = complete_selection
+            && selected.iter().all(|item| {
+                !item.asset_id.is_nil()
+                    && rules::held(inv, item) & (rules::COPY | rules::MODIFY | rules::TRANSFER)
+                        == rules::COPY | rules::MODIFY | rules::TRANSFER
+            });
         let formats = c.group(
             "save-textures",
             TEXT,
@@ -311,7 +305,7 @@ pub(super) fn build(c: &mut Catalog, inv: &Inventory, id: Uuid, st: &InventoryUi
             } else {
                 prototype_i18n::tr!("inventory-save-selected-textures")
             },
-            permitted(true),
+            permitted && !trash,
             Direction::Vertical,
             false,
         );
@@ -324,7 +318,7 @@ pub(super) fn build(c: &mut Catalog, inv: &Inventory, id: Uuid, st: &InventoryUi
                 &formats,
                 "device-floppy",
                 label,
-                permitted(png),
+                permitted && !trash,
                 InvAction::ExportTextures {
                     items: selected.iter().map(|item| item.id).collect(),
                     png,
@@ -394,7 +388,7 @@ pub(super) fn build(c: &mut Catalog, inv: &Inventory, id: Uuid, st: &InventoryUi
             ),
             (
                 "card-request-teleport",
-                "map-pin-filled",
+                "car-filled",
                 prototype_i18n::tr!("inventory-card-request-teleport"),
                 crate::ui::context::CtxAction::RequestTeleport(who),
                 single && facts.online.contains(&who),
@@ -525,9 +519,12 @@ pub(super) fn build(c: &mut Catalog, inv: &Inventory, id: Uuid, st: &InventoryUi
             c,
             "rez-previous",
             complete_selection
-                && selected
-                    .iter()
-                    .all(|item| item.asset_type == 6 && !facts.worn.contains(&item.id) && rules::mutable(inv, item.id)),
+                && selected.iter().all(|item| {
+                    item.asset_type == 6
+                        && !facts.worn.contains(&item.id)
+                        && rules::mutable(inv, item.id)
+                        && rules::restorable(item, facts.opensim)
+                }),
             super::Command::Batch(selected.iter().map(|item| InvAction::Restore(item.id)).collect()),
         );
     }
@@ -655,7 +652,13 @@ fn discover_originals(inv: &mut Inventory, root: Uuid) -> bool {
     complete
 }
 
-pub(in crate::ui::inventory) fn process_deferred(inv: &mut Inventory, st: &mut InventoryUi, prefs: &InventoryPreferences, facts: &Facts) {
+pub(in crate::ui::inventory) fn process_deferred(
+    inv: &mut Inventory,
+    st: &mut InventoryUi,
+    prefs: &InventoryPreferences,
+    facts: &Facts,
+    actions: &mut Vec<InvAction>,
+) {
     let Some(folder) = st.pending_cleanup else { return };
     if st.pending.is_some() || st.dialog.is_some() || st.cleanup_generation == Some(inv.generation) {
         return;
@@ -690,7 +693,7 @@ pub(in crate::ui::inventory) fn process_deferred(inv: &mut Inventory, st: &mut I
         st.message = prototype_i18n::tr!("inventory-no-broken-links").into();
     } else if super::super::delete::allowed(inv, &broken, prefs, facts) {
         st.message.clear();
-        st.dialog = Some(EditDialog::Delete(broken, false));
+        super::super::delete::confirm_or_run(inv, st, prefs, facts, actions, broken);
     }
 }
 
@@ -737,7 +740,7 @@ pub(super) fn execute(
             {
                 let ids = folder.items.iter().chain(&folder.children).copied().collect::<Vec<_>>();
                 if super::super::delete::allowed(inv, &ids, prefs, facts) {
-                    st.dialog = Some(EditDialog::Delete(ids, false));
+                    super::super::delete::confirm_or_run(inv, st, prefs, facts, actions, ids);
                 }
             }
         }
@@ -806,11 +809,7 @@ mod tests {
             if !permitted {
                 inv.items.get_mut(&snapshot).expect("snapshot").owner_mask &= !rules::TRANSFER;
             }
-            let facts = Facts {
-                agent: Uuid::from_u128(2),
-                ..Default::default()
-            };
-            let menu = super::super::build(&inv, link, &state, &InventoryPreferences::default(), &facts);
+            let menu = super::super::build(&inv, link, &state, &InventoryPreferences::default(), &Facts::default());
             for (key, expected_png) in [("save-textures-png", true), ("save-textures-tga", false)] {
                 let entry = menu.entries.iter().find(|entry| entry.id == key).expect("export format");
                 assert_eq!(entry.enabled, permitted);
@@ -824,52 +823,6 @@ mod tests {
                 assert!(items.contains(&texture) && items.contains(&snapshot));
             }
         }
-    }
-
-    #[test]
-    fn batch_tga_requires_every_textures_creator_but_official_formats_do_not() {
-        let mut inv = seed();
-        let agent = Uuid::from_u128(2);
-        let texture = Uuid::from_u128(8104);
-        let snapshot = Uuid::from_u128(8100);
-        inv.items.get_mut(&texture).expect("texture").creator = agent;
-        let item = inv.items.get_mut(&snapshot).expect("snapshot");
-        item.asset_type = 15;
-        item.creator = Uuid::from_u128(99);
-        let facts = Facts {
-            agent,
-            ..Default::default()
-        };
-        let mut state = InventoryUi::default();
-        let enabled = |state: &InventoryUi, inv: &Inventory, format: &str| {
-            let menu = super::super::build(inv, snapshot, state, &InventoryPreferences::default(), &facts);
-            menu.entries.iter().find(|entry| entry.id == format).expect("export format").enabled
-        };
-        assert!(
-            enabled(&state, &inv, "save-textures-tga"),
-            "single texture TGA is available in the official viewer"
-        );
-        state.selection.extend([texture, snapshot]);
-        assert!(
-            enabled(&state, &inv, "save-textures-png"),
-            "batch PNG is available in the official viewer"
-        );
-        assert!(!enabled(&state, &inv, "save-textures-tga"));
-        inv.items.get_mut(&snapshot).expect("snapshot").creator = Uuid::nil();
-        assert!(!enabled(&state, &inv, "save-textures-tga"), "missing creator metadata fails closed");
-        inv.items.get_mut(&snapshot).expect("snapshot").creator = agent;
-        assert!(enabled(&state, &inv, "save-textures-tga"));
-        let item = inv.items.get_mut(&snapshot).expect("snapshot");
-        item.owner = Uuid::from_u128(99);
-        assert!(
-            !enabled(&state, &inv, "save-textures-png"),
-            "another owner's mask does not confer permission"
-        );
-        inv.items.get_mut(&snapshot).expect("snapshot").everyone_mask = rules::COPY | rules::MODIFY | rules::TRANSFER;
-        assert!(
-            enabled(&state, &inv, "save-textures-png"),
-            "effective everyone rights can authorize an official format"
-        );
     }
 
     #[test]
@@ -1025,16 +978,18 @@ mod tests {
             ..Default::default()
         };
         let prefs = InventoryPreferences::default();
-        process_deferred(&mut inv, &mut state, &prefs, &Facts::default());
+        let mut actions = Vec::new();
+        process_deferred(&mut inv, &mut state, &prefs, &Facts::default(), &mut actions);
         assert_eq!(state.pending_cleanup, Some(folder));
         assert!(state.dialog.is_none());
         assert!(inv.queue.iter().any(|(id, _)| *id == inv.lib_root));
         state.selection.insert(Uuid::from_u128(8001));
         inv.folders.get_mut(&inv.lib_root).expect("library").state = FetchState::Fetched;
         inv.generation += 1;
-        process_deferred(&mut inv, &mut state, &prefs, &Facts::default());
+        process_deferred(&mut inv, &mut state, &prefs, &Facts::default(), &mut actions);
         assert!(state.pending_cleanup.is_none());
         assert!(matches!(&state.dialog,Some(EditDialog::Delete(ids,false)) if ids.contains(&broken)));
+        assert!(actions.is_empty());
     }
 
     #[test]

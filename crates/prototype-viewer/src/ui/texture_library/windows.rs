@@ -6,7 +6,6 @@ use super::*;
 
 pub(super) struct PreviewWindow {
     pub id: Uuid,
-    asset: Uuid,
     pub view: prototype_render::preview::View,
     first_show: bool,
     pub(super) editor: Option<material_editor::Editor>,
@@ -15,106 +14,40 @@ pub(super) struct PreviewWindow {
 }
 
 pub(super) struct BatchExport {
-    request: ExportRequest,
-    view: texture_view::ImageView,
-}
-
-#[derive(Clone, Copy)]
-pub(super) struct ExportRequest {
     item: Uuid,
     asset: Uuid,
-    agent: Uuid,
-    png: bool,
-}
-
-impl ExportRequest {
-    fn authorized_item(self, world: &World) -> Option<&prototype_net::inventory::InvItem> {
-        world.inventory.items.get(&self.item).filter(|item| {
-            world.agent_id == self.agent && item.asset_id == self.asset && can_export_inventory_texture(world, item, !self.png)
-        })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn queued_tga_rechecks_the_asset_creator_and_permissions() {
-        let mut world = World::new(std::sync::Arc::new(crate::scene::avatar::AvatarLibrary::load()));
-        let agent = Uuid::from_u128(2);
-        world.agent_id = agent;
-        crate::world::inventory::demo::seed(&mut world.inventory, agent);
-        let item = Uuid::from_u128(8104);
-        let asset = world.inventory.items[&item].asset_id;
-        let request = ExportRequest {
-            item,
-            asset,
-            agent,
-            png: false,
-        };
-        assert!(request.authorized_item(&world).is_some());
-
-        world.inventory.items.get_mut(&item).expect("texture").creator = Uuid::nil();
-        assert!(request.authorized_item(&world).is_none());
-        let texture = world.inventory.items.get_mut(&item).expect("texture");
-        texture.creator = agent;
-        texture.owner_mask &= !rules::TRANSFER;
-        assert!(request.authorized_item(&world).is_none());
-        let texture = world.inventory.items.get_mut(&item).expect("texture");
-        texture.owner_mask |= rules::TRANSFER;
-        texture.asset_id = Uuid::from_u128(99);
-        assert!(request.authorized_item(&world).is_none());
-    }
+    view: texture_view::ImageView,
 }
 
 pub(crate) fn window_id(item: Uuid) -> String {
     format!("resource_preview_{item}")
 }
 
-fn preview_item(inv: &Inventory, id: Uuid) -> Option<&prototype_net::inventory::InvItem> {
-    let original = rules::original(inv, id)?;
-    inv.items.get(&original).filter(|item| matches!(item.asset_type, 0 | 15 | 57))
-}
-
-fn can_export_inventory_texture(world: &World, item: &prototype_net::inventory::InvItem, require_creator: bool) -> bool {
-    let in_item_group = !item.group_id.is_nil() && world.groups.group(&item.group_id).is_some();
-    can_export_texture(item, world.agent_id, in_item_group, require_creator)
-}
-
 impl LibraryUi {
     /// LLTextureBridge::save_as / LLInventoryAction::saveMultipleTextures.
     /// Every image still passes the ordinary full-resolution export path.
     pub(crate) fn begin_exports(&mut self, ctx: &egui::Context, world: &World, items: Vec<Uuid>, png: bool) {
-        if self.agent != world.agent_id {
-            self.reset();
-            self.agent = world.agent_id;
-        }
-        let batch = items.len() > 1;
+        let full = rules::COPY | rules::MODIFY | rules::TRANSFER;
         let mut seen = HashSet::new();
-        let requests: Option<Vec<_>> = items
+        let items: Vec<_> = items
             .into_iter()
             .filter(|id| seen.insert(*id))
-            .map(|id| {
-                let item = world.inventory.items.get(&id)?;
-                // The official viewer offers both formats for single saves and PNG for batches.
-                can_export_inventory_texture(world, item, batch && !png).then_some(ExportRequest {
-                    item: id,
-                    asset: item.asset_id,
-                    agent: world.agent_id,
-                    png,
-                })
+            .filter(|id| {
+                world
+                    .inventory
+                    .items
+                    .get(id)
+                    .is_some_and(|item| matches!(item.asset_type, 0 | 15) && rules::held(&world.inventory, item) & full == full)
             })
             .collect();
-        let Some(requests) = requests else { return };
-        if let [request] = requests.as_slice() {
-            self.open_preview(ctx, world, request.item);
-            self.export_texture(world, request.item, png);
-        } else if !requests.is_empty() && self.export_folder.is_none() {
+        if items.len() == 1 {
+            self.open_preview(ctx, world, items[0]);
+            self.export_texture(items[0], png);
+        } else if !items.is_empty() && self.export_folder.is_none() {
             if self.export_jobs.is_empty() && self.export_queue.is_empty() {
                 self.export_error = None;
             }
-            self.export_items = requests;
+            self.export_items = items.into_iter().map(|id| (id, png)).collect();
             let (sender, receiver) = crossbeam_channel::bounded(1);
             self.export_folder = Some(receiver);
             let wake = ctx.clone();
@@ -133,22 +66,26 @@ impl LibraryUi {
             self.export_folder = None;
             let items = std::mem::take(&mut self.export_items);
             if let Some(folder) = folder {
-                self.export_queue.extend(items.into_iter().map(|request| (request, folder.clone())));
+                self.export_queue
+                    .extend(items.into_iter().map(|(id, png)| (id, folder.clone(), png)));
             }
         }
+        let full = rules::COPY | rules::MODIFY | rules::TRANSFER;
         let mut completed = false;
         // Bounded decoding and IO; a large selection does not open hundreds
         // of preview windows or retain all full-resolution images together.
         self.export_jobs.retain_mut(|job| {
-            if job.request.authorized_item(world).is_none() {
-                completed = true;
-                self.export_error
-                    .get_or_insert_with(|| prototype_i18n::tr!("resource-preview-export-permissions").into());
+            if world
+                .inventory
+                .items
+                .get(&job.item)
+                .is_none_or(|item| item.asset_id != job.asset || rules::held(&world.inventory, item) & full != full)
+            {
                 return false;
             }
-            self.wanted_images.insert(job.request.asset);
-            scene.textures.note_usage_fixed(&job.request.asset, 16384.0);
-            job.view.prepare(ctx, job.request.asset, scene);
+            self.wanted_images.insert(job.asset);
+            scene.textures.note_usage_fixed(&job.asset, 16384.0);
+            job.view.prepare(ctx, job.asset, scene);
             if job.view.export_finished() {
                 self.message = job.view.message.clone();
                 completed = true;
@@ -161,13 +98,15 @@ impl LibraryUi {
             }
         });
         while self.export_jobs.len() < 3 {
-            let Some((request, folder)) = self.export_queue.pop_front() else {
+            let Some((id, folder, png)) = self.export_queue.pop_front() else {
                 break;
             };
-            let Some(item) = request.authorized_item(world) else {
-                completed = true;
-                self.export_error
-                    .get_or_insert_with(|| prototype_i18n::tr!("resource-preview-export-permissions").into());
+            let Some(item) = world
+                .inventory
+                .items
+                .get(&id)
+                .filter(|item| rules::held(&world.inventory, item) & full == full)
+            else {
                 continue;
             };
             let name: String = item
@@ -182,12 +121,12 @@ impl LibraryUi {
                 })
                 .take(100)
                 .collect();
-            let id = request.item;
-            let extension = if request.png { "png" } else { "tga" };
+            let extension = if png { "png" } else { "tga" };
             let filename = format!("{}-{id}.{extension}", name.trim().trim_end_matches('.'));
             self.export_jobs.push(BatchExport {
-                request,
-                view: texture_view::ImageView::batch_export(folder.join(filename), request.png),
+                item: id,
+                asset: item.asset_id,
+                view: texture_view::ImageView::batch_export(folder.join(filename), png),
             });
         }
         if completed && self.export_jobs.is_empty() && self.export_queue.is_empty() && self.export_folder.is_none() {
@@ -296,18 +235,14 @@ impl LibraryUi {
         editor.finish_save(result);
         material
     }
-    pub(crate) fn export_texture(&mut self, world: &World, id: Uuid, png: bool) {
-        if self.agent == world.agent_id
-            && let Some(item) = world.inventory.items.get(&id)
-            && can_export_inventory_texture(world, item, false)
-            && let Some(window) = self.windows.iter_mut().find(|w| w.id == id && w.asset == item.asset_id)
-        {
-            window.texture.begin_export(png);
+    pub(crate) fn export_texture(&mut self, item: Uuid, png: bool) {
+        if let Some(window) = self.windows.iter_mut().find(|w| w.id == item) {
+            window.texture.export = Some(png);
         }
     }
     pub(crate) fn refresh_texture(&mut self, world: &World, asset: Uuid) {
         for window in &mut self.windows {
-            if preview_item(&world.inventory, window.id).is_some_and(|it| it.asset_id == asset) {
+            if catalogue::resource(&world.inventory, window.id).is_some_and(|it| it.asset_id == asset) {
                 let display = window.texture.display;
                 window.texture = Default::default();
                 window.texture.display = display;
@@ -327,14 +262,13 @@ impl LibraryUi {
             self.reset();
             self.agent = world.agent_id;
         }
-        let Some(item) = preview_item(&world.inventory, id) else {
+        let Some(item) = catalogue::resource(&world.inventory, id) else {
             return;
         };
         let mut existing = self.windows.iter().any(|window| window.id == item.id);
         if !existing {
             self.windows.push(PreviewWindow {
                 id: item.id,
-                asset: item.asset_id,
                 view: Default::default(),
                 first_show: true,
                 editor: None,
@@ -378,21 +312,14 @@ impl LibraryUi {
         window: &mut PreviewWindow,
         actions: &mut Vec<Action>,
     ) -> bool {
-        let Some(item) = preview_item(&world.inventory, window.id).cloned() else {
+        let Some(item) = catalogue::resource(&world.inventory, window.id).cloned() else {
             return false;
         };
         if !world.inventory.can_preview(item.asset_type) {
-            window.texture.cancel_export();
             return true;
         }
         let material = item.asset_type == 57;
         let asset = catalogue::asset(&item);
-        if window.asset != item.asset_id {
-            window.asset = item.asset_id;
-            let display = window.texture.display;
-            window.texture = Default::default();
-            window.texture.display = display;
-        }
         let path = super::super::inventory::inventory_path(&world.inventory, item.parent);
         let id = window_id(item.id);
         // Human-requested defaults by resource type. Only new windows inherit
@@ -431,15 +358,25 @@ impl LibraryUi {
                 }
             } else {
                 self.wanted_images.insert(asset);
-                let can_export = can_export_inventory_texture(world, &item, false);
-                if !can_export {
-                    window.texture.cancel_export();
+                if rules::held(&world.inventory, &item) & (rules::COPY | rules::MODIFY | rules::TRANSFER)
+                    != rules::COPY | rules::MODIFY | rules::TRANSFER
+                {
+                    window.texture.export = None;
+                    window.texture.export_path = None;
                 }
                 window.texture.prepare(ctx, asset, scene);
                 let image = window.texture.image.as_ref().or_else(|| images.get(&asset));
                 let dimensions = scene.textures.full_size(&asset).or(window.texture.dimensions);
                 let before = window.texture.display;
-                texture_view::toolbar(ui, p, &item, can_export, dimensions, &mut window.texture.display, actions);
+                texture_view::toolbar(
+                    ui,
+                    p,
+                    &item,
+                    rules::held(&world.inventory, &item),
+                    dimensions,
+                    &mut window.texture.display,
+                    actions,
+                );
                 // the picture in exactly the room the description, the
                 // buttons and the notes leave
                 let (mut view, foot) = widgets::above_footer(ui);
@@ -517,7 +454,7 @@ impl LibraryUi {
                         }
                     });
                     ui.label(
-                        RichText::new(if item.owner_mask & rules::COPY != 0 {
+                        RichText::new(if rules::held(&world.inventory, &item) & rules::COPY != 0 {
                             prototype_i18n::tr!("texture-library-copy")
                         } else {
                             prototype_i18n::tr!("texture-library-no-copy")

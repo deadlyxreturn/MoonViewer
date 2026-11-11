@@ -58,7 +58,7 @@ pub fn editable(world: &World) -> Result<InvItem, String> {
     if world.agent_id.is_nil()
         || item.owner != world.agent_id
         || item.group_owned
-        || item.owner_mask & prototype_net::build::perm::MODIFY == 0
+        || crate::world::inventory::actions::agent_mask(item, world.agent_id) & prototype_net::build::perm::MODIFY == 0
     {
         return Err(prototype_i18n::tr!("blender-shape-no-modify").into());
     }

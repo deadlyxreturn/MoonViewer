@@ -88,9 +88,7 @@ pub(crate) struct ImageView {
     pub image: Option<egui::TextureHandle>,
     pub dimensions: Option<(u32, u32)>,
     pub export: Option<bool>,
-    export_path: Option<std::path::PathBuf>,
-    export_picker: Option<crossbeam_channel::Receiver<Option<std::path::PathBuf>>>,
-    batch: bool,
+    pub export_path: Option<std::path::PathBuf>,
     pub(super) metadata: Metadata,
     pub message: String,
     pixels: Option<Arc<prototype_render::preview::Image>>,
@@ -103,20 +101,8 @@ impl ImageView {
         Self {
             export_path: Some(path),
             export: Some(png),
-            batch: true,
             ..Default::default()
         }
-    }
-    pub(super) fn begin_export(&mut self, png: bool) {
-        if self.export.is_none() && self.export_reply.is_none() {
-            self.message.clear();
-            self.export = Some(png);
-        }
-    }
-    pub(super) fn cancel_export(&mut self) {
-        self.export = None;
-        self.export_path = None;
-        self.export_picker = None;
     }
     pub(super) fn export_finished(&self) -> bool {
         self.export.is_none() && self.export_reply.is_none() && !self.message.is_empty()
@@ -156,58 +142,51 @@ impl ImageView {
             self.message = message;
             self.export_reply = None;
         }
-        if let Some(path) = self.export_picker.as_ref().and_then(|rx| rx.try_recv().ok()) {
-            self.export_picker = None;
-            if path.is_none() {
-                self.cancel_export();
-            }
-            self.export_path = path;
-        }
-        let (Some(png), Some(pixels)) = (self.export, self.pixels.clone()) else {
-            return;
-        };
-        if self.export_reply.is_some() || self.export_picker.is_some() {
-            return;
-        }
-        let (extension, format) = if png {
-            ("png", image::ImageFormat::Png)
-        } else {
-            ("tga", image::ImageFormat::Tga)
-        };
-        let Some(path) = self.export_path.take() else {
+        if self.export_reply.is_none()
+            && let Some(png) = self.export
+            && let Some(pixels) = self.pixels.clone()
+        {
+            self.export = None;
             let (tx, rx) = crossbeam_channel::bounded(1);
-            self.export_picker = Some(rx);
+            self.export_reply = Some(rx);
             let wake = ctx.clone();
-            // Resume on the UI thread so item permissions are rechecked after the picker.
+            let batch_path = self.export_path.take();
             std::thread::spawn(move || {
-                let path = rfd::FileDialog::new()
+                let (extension, format) = if png {
+                    ("png", image::ImageFormat::Png)
+                } else {
+                    ("tga", image::ImageFormat::Tga)
+                };
+                let message = if let Some(path) = batch_path {
+                    let result = write_batch(&path, &pixels, format);
+                    match result {
+                        Ok(()) => prototype_i18n::tr!("resource-preview-exported").to_owned(),
+                        Err(reason) => prototype_i18n::tr!("resource-preview-export-error", reason = reason.to_string()),
+                    }
+                } else if let Some(path) = rfd::FileDialog::new()
                     .set_title(prototype_i18n::tr!("common-save-as"))
                     .set_file_name(format!("{asset}.{extension}"))
                     .add_filter(extension, &[extension])
-                    .save_file();
-                let _ = tx.send(path);
+                    .save_file()
+                {
+                    match image::save_buffer_with_format(
+                        path,
+                        &pixels.rgba,
+                        pixels.size[0],
+                        pixels.size[1],
+                        image::ColorType::Rgba8,
+                        format,
+                    ) {
+                        Ok(()) => prototype_i18n::tr!("resource-preview-exported").to_owned(),
+                        Err(reason) => prototype_i18n::tr!("resource-preview-export-error", reason = reason.to_string()),
+                    }
+                } else {
+                    String::new()
+                };
+                let _ = tx.send(message);
                 wake.request_repaint();
             });
-            return;
-        };
-        self.export = None;
-        let (tx, rx) = crossbeam_channel::bounded(1);
-        self.export_reply = Some(rx);
-        let wake = ctx.clone();
-        let batch = self.batch;
-        std::thread::spawn(move || {
-            let result = if batch {
-                write_batch(&path, &pixels, format)
-            } else {
-                image::save_buffer_with_format(path, &pixels.rgba, pixels.size[0], pixels.size[1], image::ColorType::Rgba8, format)
-            };
-            let message = match result {
-                Ok(()) => prototype_i18n::tr!("resource-preview-exported").to_owned(),
-                Err(reason) => prototype_i18n::tr!("resource-preview-export-error", reason = reason.to_string()),
-            };
-            let _ = tx.send(message);
-            wake.request_repaint();
-        });
+        }
     }
 }
 
@@ -289,7 +268,7 @@ pub(super) fn toolbar(
     ui: &mut egui::Ui,
     p: &Palette,
     item: &prototype_net::inventory::InvItem,
-    can_export: bool,
+    held: u32,
     dimensions: Option<(u32, u32)>,
     display: &mut Display,
     actions: &mut Vec<Action>,
@@ -299,10 +278,12 @@ pub(super) fn toolbar(
         if widgets::icon_button(ui, p, "refresh", prototype_i18n::tr!("resource-preview-refresh"), true) {
             actions.push(Action::RefreshTexture(item.asset_id));
         }
-        if widgets::icon_button(ui, p, "copy-filled", prototype_i18n::tr!("resource-preview-copy-uuid"), true) {
+        // LLPreviewTexture::postBuild shows "Copy UUID" for full permissions only
+        let full = held & rules::FULL == rules::FULL;
+        if widgets::icon_button(ui, p, "copy-filled", prototype_i18n::tr!("resource-preview-copy-uuid"), full) {
             ui.ctx().copy_text(item.asset_id.to_string());
         }
-        ui.add_enabled_ui(can_export, |ui| {
+        ui.add_enabled_ui(full, |ui| {
             egui::ComboBox::from_id_salt("texture_export")
                 .selected_text(prototype_i18n::tr!("common-save-as"))
                 .show_ui(ui, |ui| {
