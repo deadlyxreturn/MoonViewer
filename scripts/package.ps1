@@ -26,7 +26,7 @@ $notices = @{
         Select-Object -ExpandProperty FullName)
     icons = (Join-Path $viewerAssets 'icons/LICENSE-tabler.txt')
     lsl = (Join-Path $viewerAssets 'lsl/PREPROCESSOR-LICENSE.txt')
-    stars = (Join-Path $Source 'assets/stars/LICENSE-HYG.md')
+    stars = (Join-Path $Source 'assets/stars/LICENSE-TYCHO2.md')
 }
 if ($windowsPackage) { $notices.branding = Join-Path $Source 'assets/branding/moon-viewer.ico' }
 foreach ($group in $notices.Keys) {
