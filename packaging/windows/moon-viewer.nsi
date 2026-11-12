@@ -118,6 +118,8 @@ Section "Uninstall"
   removeFiles:
   Delete "$INSTDIR\${UNINSTALLER}"
   Delete "$INSTDIR\LICENSE"
+  Delete "$INSTDIR\ffmpeg.exe"
+  Delete "$INSTDIR\ffmpeg-LICENSE.txt"
   Delete "$INSTDIR\NOTICE.md"
   Delete "$INSTDIR\README.md"
   Delete "$INSTDIR\PRIVACY.md"

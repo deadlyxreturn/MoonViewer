@@ -36,7 +36,7 @@ pub struct RecorderSettings {
     pub sound: bool,
     /// The microphone is recorded with the video (your voice).
     pub microphone: bool,
-    /// Where the videos go; empty: `<Videos>/Prototype`.
+    /// Where the videos go; empty: `<Videos>/Moon Viewer`.
     pub folder: String,
 }
 
@@ -66,12 +66,12 @@ impl RecorderSettings {
     }
 }
 
-/// `<Videos>/Prototype`, or the data folder when there is none.
+/// `<Videos>/Moon Viewer`, or the data folder when there is none.
 pub fn default_folder() -> PathBuf {
     directories::UserDirs::new()
         .and_then(|d| d.video_dir().map(Path::to_path_buf))
         .unwrap_or_else(|| crate::settings::config_dir().join("videos"))
-        .join("Prototype")
+        .join("Moon Viewer")
 }
 
 /// What the recorder last did, for the toolbar and the Record window.
